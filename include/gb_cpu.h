@@ -51,47 +51,56 @@ private:
 
     registers_t                _m_registers;
     std::vector<instruction_t> _m_instructions;
+    std::vector<instruction_t> _m_cb_instructions;
 
     // Op execution routines
-    uint64_t _op_exec_nop(instruction_t* instruction);
-    uint64_t _op_exec_stop(instruction_t* instruction);
-    uint64_t _op_exec_halt(instruction_t* instruction);
-    uint64_t _op_exec_ld(instruction_t* instruction);
-    uint64_t _op_exec_ldhl(instruction_t* instruction);
-    uint64_t _op_exec_jr(instruction_t* instruction);
-    uint64_t _op_exec_jp(instruction_t* instruction);
-    uint64_t _op_exec_call(instruction_t* instruction);
-    uint64_t _op_exec_ret(instruction_t* instruction);
-    uint64_t _op_exec_reti(instruction_t* instruction);
-    uint64_t _op_exec_rst(instruction_t* instruction);
-    uint64_t _op_exec_add8(instruction_t* instruction);
-    uint64_t _op_exec_add16(instruction_t* instruction);
-    uint64_t _op_exec_addsp(instruction_t* instruction);
-    uint64_t _op_exec_add1(instruction_t* instruction);
-    uint64_t _op_exec_adc(instruction_t* instruction);
-    uint64_t _op_exec_sub(instruction_t* instruction);
-    uint64_t _op_exec_sbc(instruction_t* instruction);
-    uint64_t _op_exec_inc(instruction_t* instruction);
-    uint64_t _op_exec_incf(instruction_t* instruction);
-    uint64_t _op_exec_dec(instruction_t* instruction);
-    uint64_t _op_exec_decf(instruction_t* instruction);
-    uint64_t _op_exec_rlc(instruction_t* instruction);
-    uint64_t _op_exec_rlca(instruction_t* instruction);
-    uint64_t _op_exec_rl(instruction_t* instruction);
-    uint64_t _op_exec_rla(instruction_t* instruction);
-    uint64_t _op_exec_rrc(instruction_t* instruction);
-    uint64_t _op_exec_rrca(instruction_t* instruction);
-    uint64_t _op_exec_rr(instruction_t* instruction);
-    uint64_t _op_exec_rra(instruction_t* instruction);
-    uint64_t _op_exec_da(instruction_t* instruction);
-    uint64_t _op_exec_cpl(instruction_t* instruction);
-    uint64_t _op_exec_scf(instruction_t* instruction);
-    uint64_t _op_exec_ccf(instruction_t* instruction);
-    uint64_t _op_exec_and(instruction_t* instruction);
-    uint64_t _op_exec_xor(instruction_t* instruction);
-    uint64_t _op_exec_or(instruction_t* instruction);
-    uint64_t _op_exec_di(instruction_t* instruction);
-    uint64_t _op_exec_ei(instruction_t* instruction);
+    uint64_t _op_exec_cb(instruction_t *instruction);
+    uint64_t _op_exec_nop(instruction_t *instruction);
+    uint64_t _op_exec_stop(instruction_t *instruction);
+    uint64_t _op_exec_halt(instruction_t *instruction);
+    uint64_t _op_exec_ld(instruction_t *instruction);
+    uint64_t _op_exec_ldhl(instruction_t *instruction);
+    uint64_t _op_exec_jr(instruction_t *instruction);
+    uint64_t _op_exec_jp(instruction_t *instruction);
+    uint64_t _op_exec_call(instruction_t *instruction);
+    uint64_t _op_exec_ret(instruction_t *instruction);
+    uint64_t _op_exec_reti(instruction_t *instruction);
+    uint64_t _op_exec_rst(instruction_t *instruction);
+    uint64_t _op_exec_add8(instruction_t *instruction);
+    uint64_t _op_exec_add16(instruction_t *instruction);
+    uint64_t _op_exec_addsp(instruction_t *instruction);
+    uint64_t _op_exec_add1(instruction_t *instruction);
+    uint64_t _op_exec_adc(instruction_t *instruction);
+    uint64_t _op_exec_sub(instruction_t *instruction);
+    uint64_t _op_exec_sbc(instruction_t *instruction);
+    uint64_t _op_exec_inc(instruction_t *instruction);
+    uint64_t _op_exec_incf(instruction_t *instruction);
+    uint64_t _op_exec_dec(instruction_t *instruction);
+    uint64_t _op_exec_decf(instruction_t *instruction);
+    uint64_t _op_exec_da(instruction_t *instruction);
+    uint64_t _op_exec_rlc(instruction_t *instruction);
+    uint64_t _op_exec_rlca(instruction_t *instruction);
+    uint64_t _op_exec_rl(instruction_t *instruction);
+    uint64_t _op_exec_rla(instruction_t *instruction);
+    uint64_t _op_exec_rrc(instruction_t *instruction);
+    uint64_t _op_exec_rrca(instruction_t *instruction);
+    uint64_t _op_exec_rr(instruction_t *instruction);
+    uint64_t _op_exec_rra(instruction_t *instruction);
+    uint64_t _op_exec_sla(instruction_t *instruction);
+    uint64_t _op_exec_sra(instruction_t *instruction);
+    uint64_t _op_exec_srl(instruction_t *instruction);
+    uint64_t _op_exec_swap(instruction_t *instruction);
+    uint64_t _op_exec_cpl(instruction_t *instruction);
+    uint64_t _op_exec_scf(instruction_t *instruction);
+    uint64_t _op_exec_ccf(instruction_t *instruction);
+    uint64_t _op_exec_and(instruction_t *instruction);
+    uint64_t _op_exec_xor(instruction_t *instruction);
+    uint64_t _op_exec_or(instruction_t *instruction);
+    uint64_t _op_exec_bit(instruction_t *instruction);
+    uint64_t _op_exec_set(instruction_t *instruction);
+    uint64_t _op_exec_res(instruction_t *instruction);
+    uint64_t _op_exec_di(instruction_t *instruction);
+    uint64_t _op_exec_ei(instruction_t *instruction);
 
     // Operand getters
     uint16_t _operand_get_register_a();
@@ -134,6 +143,14 @@ private:
     uint16_t _operand_get_rst_28();
     uint16_t _operand_get_rst_30();
     uint16_t _operand_get_rst_38();
+    uint16_t _operand_get_imm_0();
+    uint16_t _operand_get_imm_1();
+    uint16_t _operand_get_imm_2();
+    uint16_t _operand_get_imm_3();
+    uint16_t _operand_get_imm_4();
+    uint16_t _operand_get_imm_5();
+    uint16_t _operand_get_imm_6();
+    uint16_t _operand_get_imm_7();
 
     // Operand setters
     void _operand_set_register_a(uint16_t addr, uint16_t val);
@@ -151,6 +168,7 @@ private:
     void _operand_set_register_sp(uint16_t addr, uint16_t val);
     void _operand_set_register_pc(uint16_t addr, uint16_t val);
     void _operand_set_mem_8(uint16_t addr, uint16_t val);
+    void _operand_set_mem_hl_8(uint16_t addr, uint16_t val);
     void _operand_set_mem_sp_16(uint16_t addr, uint16_t val);
 
     // Op print routines
