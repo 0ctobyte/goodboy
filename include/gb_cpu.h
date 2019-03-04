@@ -76,9 +76,13 @@ private:
     uint64_t _op_exec_dec(instruction_t* instruction);
     uint64_t _op_exec_decf(instruction_t* instruction);
     uint64_t _op_exec_rlc(instruction_t* instruction);
+    uint64_t _op_exec_rlca(instruction_t* instruction);
     uint64_t _op_exec_rl(instruction_t* instruction);
+    uint64_t _op_exec_rla(instruction_t* instruction);
     uint64_t _op_exec_rrc(instruction_t* instruction);
+    uint64_t _op_exec_rrca(instruction_t* instruction);
     uint64_t _op_exec_rr(instruction_t* instruction);
+    uint64_t _op_exec_rra(instruction_t* instruction);
     uint64_t _op_exec_da(instruction_t* instruction);
     uint64_t _op_exec_cpl(instruction_t* instruction);
     uint64_t _op_exec_scf(instruction_t* instruction);

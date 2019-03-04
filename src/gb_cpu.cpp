@@ -25,7 +25,7 @@
 /* 0x04 */ {"INC B", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_b, nullptr, &gb_cpu::_operand_set_register_b, &gb_cpu::_op_exec_incf, 4, 4}, \
 /* 0x05 */ {"DEC B", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_b, nullptr, &gb_cpu::_operand_set_register_b, &gb_cpu::_op_exec_decf, 4, 4}, \
 /* 0x06 */ {"LD B, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, nullptr, &gb_cpu::_operand_set_register_b, &gb_cpu::_op_exec_ld, 8, 8}, \
-/* 0x07 */ {"RLC A", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rlc, 4, 4}, \
+/* 0x07 */ {"RLCA", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rlca, 4, 4}, \
 /* 0x08 */ {"LD (0x%04x), SP", &gb_cpu::_op_print_type3, &gb_cpu::_operand_get_register_sp, &gb_cpu::_operand_get_mem_16, &gb_cpu::_operand_set_mem_8, &gb_cpu::_op_exec_ld, 20, 20}, \
 /* 0x09 */ {"ADD HL, BC", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_bc, &gb_cpu::_operand_get_register_hl, &gb_cpu::_operand_set_register_hl, &gb_cpu::_op_exec_add16, 8, 8}, \
 /* 0x0A */ {"LD A, (BC)", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_bc, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_ld, 8, 8}, \
@@ -33,7 +33,7 @@
 /* 0x0C */ {"INC C", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_c, nullptr, &gb_cpu::_operand_set_register_c, &gb_cpu::_op_exec_incf, 4, 4}, \
 /* 0x0D */ {"DEC C", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_c, nullptr, &gb_cpu::_operand_set_register_c, &gb_cpu::_op_exec_decf, 4, 4}, \
 /* 0x0E */ {"LD C, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, nullptr, &gb_cpu::_operand_set_register_c, &gb_cpu::_op_exec_ld, 8, 8}, \
-/* 0x0F */ {"RRC A", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rrc, 4, 4}, \
+/* 0x0F */ {"RRCA", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rrca, 4, 4}, \
 /* 0x10 */ {"STOP 0", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_8, nullptr, nullptr, &gb_cpu::_op_exec_stop, 4, 4}, \
 /* 0x11 */ {"LD DE, 0x%04x", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_16, nullptr, &gb_cpu::_operand_set_register_de, &gb_cpu::_op_exec_ld, 12, 12}, \
 /* 0x12 */ {"LD (DE), A", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_get_register_de, &gb_cpu::_operand_set_mem_8, &gb_cpu::_op_exec_ld, 8, 8}, \
@@ -41,7 +41,7 @@
 /* 0x14 */ {"INC D", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_d, nullptr, &gb_cpu::_operand_set_register_d, &gb_cpu::_op_exec_incf, 4, 4}, \
 /* 0x15 */ {"DEC D", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_d, nullptr, &gb_cpu::_operand_set_register_d, &gb_cpu::_op_exec_decf, 4, 4}, \
 /* 0x16 */ {"LD D, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, nullptr, &gb_cpu::_operand_set_register_d, &gb_cpu::_op_exec_ld, 8, 8}, \
-/* 0x17 */ {"RL A", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rl, 4, 4}, \
+/* 0x17 */ {"RLA", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rla, 4, 4}, \
 /* 0x18 */ {"JR 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, nullptr, &gb_cpu::_operand_set_register_pc, &gb_cpu::_op_exec_jr, 12, 12}, \
 /* 0x19 */ {"ADD HL, DE", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_de, &gb_cpu::_operand_get_register_hl, &gb_cpu::_operand_set_register_hl, &gb_cpu::_op_exec_add16, 8, 8}, \
 /* 0x1A */ {"LD A, (DE)", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_de, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_ld, 8, 8}, \
@@ -49,7 +49,7 @@
 /* 0x1C */ {"INC E", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_e, nullptr, &gb_cpu::_operand_set_register_e, &gb_cpu::_op_exec_incf, 4, 4}, \
 /* 0x1D */ {"DEC E", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_e, nullptr, &gb_cpu::_operand_set_register_e, &gb_cpu::_op_exec_decf, 4, 4}, \
 /* 0x1E */ {"LD E, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, nullptr, &gb_cpu::_operand_set_register_e, &gb_cpu::_op_exec_ld, 8, 8}, \
-/* 0x1F */ {"RR A", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rr, 4, 4}, \
+/* 0x1F */ {"RRA", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rra, 4, 4}, \
 /* 0x20 */ {"JR NZ, 0x%04x", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_flags_is_nz, &gb_cpu::_operand_set_register_pc, &gb_cpu::_op_exec_jr, 12, 8}, \
 /* 0x21 */ {"LD HL, 0x%04x", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_16, nullptr, &gb_cpu::_operand_set_register_hl, &gb_cpu::_op_exec_ld, 12, 12}, \
 /* 0x22 */ {"LD (HL+), A", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_get_register_hl_plus, &gb_cpu::_operand_set_mem_8, &gb_cpu::_op_exec_ld, 8, 8}, \
@@ -576,12 +576,19 @@ uint64_t gb_cpu::_op_exec_rlc(instruction_t *instruction) {
     uint16_t val = (this->*(instruction->get_operand1))() << 1;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
+    FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(val);
 
     (this->*(instruction->set_operand))(0, val);
 
     (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
     return instruction->cycles_hi;
+}
+
+uint64_t gb_cpu::_op_exec_rlca(instruction_t *instruction) {
+    uint64_t cycles = _op_exec_rlc(instruction);
+    FLAGS_CLEAR(FLAGS_Z);
+    return cycles;
 }
 
 uint64_t gb_cpu::_op_exec_rrc(instruction_t *instruction) {
@@ -592,12 +599,19 @@ uint64_t gb_cpu::_op_exec_rrc(instruction_t *instruction) {
     val = val >> 1;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
+    FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(bit1 << 8);
 
     (this->*(instruction->set_operand))(0, val);
 
     (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
     return instruction->cycles_hi;
+}
+
+uint64_t gb_cpu::_op_exec_rrca(instruction_t *instruction) {
+    uint64_t cycles = _op_exec_rrc(instruction);
+    FLAGS_CLEAR(FLAGS_Z);
+    return cycles;
 }
 
 uint64_t gb_cpu::_op_exec_rl(instruction_t *instruction) {
@@ -608,12 +622,19 @@ uint64_t gb_cpu::_op_exec_rl(instruction_t *instruction) {
     val |= carry;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
+    FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(val);
 
     (this->*(instruction->set_operand))(0, val);
 
     (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
     return instruction->cycles_hi;
+}
+
+uint64_t gb_cpu::_op_exec_rla(instruction_t *instruction) {
+    uint64_t cycles = _op_exec_rl(instruction);
+    FLAGS_CLEAR(FLAGS_Z);
+    return cycles;
 }
 
 uint64_t gb_cpu::_op_exec_rr(instruction_t *instruction) {
@@ -625,12 +646,19 @@ uint64_t gb_cpu::_op_exec_rr(instruction_t *instruction) {
     val = (val >> 1) | (carry << 0x7);
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
+    FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(bit1 << 8);
 
     (this->*(instruction->set_operand))(0, val);
 
     (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
     return instruction->cycles_hi;
+}
+
+uint64_t gb_cpu::_op_exec_rra(instruction_t *instruction) {
+    uint64_t cycles = _op_exec_rr(instruction);
+    FLAGS_CLEAR(FLAGS_Z);
+    return cycles;
 }
 
 uint64_t gb_cpu::_op_exec_cpl(instruction_t *instruction) {
