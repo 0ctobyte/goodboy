@@ -1,5 +1,5 @@
-#ifndef _GB_MEMORY_H_
-#define _GB_MEMORY_H_
+#ifndef GB_MEMORY_H_
+#define GB_MEMORY_H_
 
 #include <cstdint>
 
@@ -7,4 +7,4 @@
 
 extern uint8_t mem[0x10000];
 
-#endif // _GB_MEMORY_H_
+#endif // GB_MEMORY_H_

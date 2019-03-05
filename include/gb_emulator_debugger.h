@@ -1,5 +1,5 @@
-#ifndef _GB_EMULATOR_DEBUGGER_H_
-#define _GB_EMULATOR_DEBUGGER_H_
+#ifndef GB_EMULATOR_DEBUGGER_H_
+#define GB_EMULATOR_DEBUGGER_H_
 
 #include <map>
 
@@ -11,6 +11,13 @@ class ncurses_stream;
 
 class gb_emulator_debugger : public gb_emulator {
 public:
+    gb_emulator_debugger(std::string rom_filename);
+
+    virtual ~gb_emulator_debugger();
+
+    virtual bool go();
+
+private:
     typedef void (gb_emulator_debugger::*key_handler_t)();
 
     ncurses_stream              *m_nstream;
@@ -32,13 +39,6 @@ public:
         {KEY_DOWN, &gb_emulator_debugger::_debugger_scroll_dn_one_line}
     };
 
-    gb_emulator_debugger(std::string rom_filename);
-
-    virtual ~gb_emulator_debugger();
-
-    virtual bool go();
-
-private:
     void _debugger_step_once();
     void _debugger_dump_registers();
     void _debugger_scroll_up_half_pg();
@@ -51,4 +51,4 @@ private:
     void _debugger_scroll_dn_one_line();
 };
 
-#endif // _GB_EMULATOR_DEBUGGER_H_
+#endif // GB_EMULATOR_DEBUGGER_H_

@@ -1,5 +1,5 @@
-#ifndef _GB_CPU_H_
-#define _GB_CPU_H_
+#ifndef GB_CPU_H_
+#define GB_CPU_H_
 
 #include <cstdint>
 #include <string>
@@ -49,9 +49,9 @@ private:
         uint64_t           cycles_lo;
     };
 
-    registers_t                _m_registers;
-    std::vector<instruction_t> _m_instructions;
-    std::vector<instruction_t> _m_cb_instructions;
+    registers_t                m_registers;
+    std::vector<instruction_t> m_instructions;
+    std::vector<instruction_t> m_cb_instructions;
 
     // Op execution routines
     uint64_t _op_exec_cb(instruction_t *instruction);
@@ -179,4 +179,4 @@ private:
     void _op_print_type4(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2);
 };
 
-#endif // _GB_CPU_H_
+#endif // GB_CPU_H_

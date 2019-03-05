@@ -7,19 +7,21 @@
 
 class ncurses_buf : public std::streambuf {
 public:
-    WINDOW *win;
+    WINDOW *m_win;
 
     ncurses_buf() {}
+    ~ncurses_buf() {}
 
     void setWindow(WINDOW *new_win) {
-        win = new_win;
+        m_win = new_win;
     }
-
-    virtual int overflow(int c) {
-        wprintw(win, "%c", c);
-        return c;
-    }
+    virtual int overflow(int c);
 };
+
+int ncurses_buf::overflow(int c) {
+    wprintw(m_win, "%c", c);
+    return c;
+}
 
 class ncurses_stream : public std::ostream {
 public:
@@ -33,10 +35,12 @@ public:
         m_tbuf.setWindow(win);
     }
 
-    ~ncurses_stream() {
-        m_src.rdbuf(m_srcbuf);
-    }
+    ~ncurses_stream();
 };
+
+ncurses_stream::~ncurses_stream() {
+    m_src.rdbuf(m_srcbuf);
+}
 
 gb_emulator_debugger::gb_emulator_debugger(std::string rom_filename)
     : gb_emulator(rom_filename),

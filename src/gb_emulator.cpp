@@ -8,10 +8,10 @@ gb_emulator::gb_emulator(std::string rom_filename)
     std::ifstream rom_file (rom_filename, std::ifstream::binary);
 
     rom_file.seekg(0, rom_file.end);
-    m_binsize = std::min((int)rom_file.tellg(), 0x10000);
+    m_binsize = std::min(static_cast<int>(rom_file.tellg()), 0x10000);
     rom_file.seekg(0, rom_file.beg);
 
-    rom_file.read((char*)mem, m_binsize);
+    rom_file.read(reinterpret_cast<char*>(mem), m_binsize);
 
     rom_file.close();
 }

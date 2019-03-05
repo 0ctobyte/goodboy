@@ -1,5 +1,5 @@
-#ifndef _GB_EMULATOR_OPTS_H_
-#define _GB_EMULATOR_OPTS_H_
+#ifndef GB_EMULATOR_OPTS_H_
+#define GB_EMULATOR_OPTS_H_
 
 #include <string>
 #include <map>
@@ -20,15 +20,15 @@ public:
 private:
     typedef bool (gb_emulator_opts::*opt_handler_t)();
 
-    int                            _m_argc;
-    char                         **_m_argv;
-    std::string                    _m_opt_str = "hd";
-    std::string                    _m_opt_doc[3] = {
+    int                            m_argc;
+    char                         **m_argv;
+    std::string                    m_opt_str = "hd";
+    std::string                    m_opt_doc[3] = {
         "-h          : Print this help and exit",
         "-d          : Run in debugger mode",
         "rom_file    : Gameboy program to run on the emulator"
     };
-    std::map<int, opt_handler_t>   _m_opt_map = {
+    std::map<int, opt_handler_t>   m_opt_map = {
         {'d', &gb_emulator_opts::_opt_set_debugger_flag},
         {'h', &gb_emulator_opts::_opt_print_doc}
     };
@@ -37,4 +37,4 @@ private:
     bool _opt_print_doc();
 };
 
-#endif // _GB_EMULATOR_OPTS_H_
+#endif // GB_EMULATOR_OPTS_H_
