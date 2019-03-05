@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "gb_cpu.h"
-#include "gb_memory.h"
+#include "gb_memory_map.h"
 
 #define FLAGS_IS_SET(flags)      ((m_registers.f & (flags)) != 0)
 #define FLAGS_IS_CLEAR(flags)    ((m_registers.f & (flags)) == 0)
@@ -560,95 +560,95 @@ uint16_t gb_cpu::get_pc() {
 uint64_t gb_cpu::step() {
     uint8_t opcode = mem[m_registers.pc];
 
-    instruction_t *instruction = &m_instructions[opcode];
+    instruction_t& instruction = m_instructions[opcode];
 
-    if (instruction->op_exec == nullptr) {
+    if (instruction.op_exec == nullptr) {
         _op_print_type0("UNKNOWN", m_registers.pc, 0, 0);
         m_registers.pc++;
         return 0;
     }
 
-    return (this->*(instruction->op_exec))(instruction);
+    return (this->*(instruction.op_exec))(instruction);
 }
 
-uint64_t gb_cpu::_op_exec_cb(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_cb(instruction_t& instruction) {
     uint8_t cb_opcode = mem[m_registers.pc+1];
 
-    instruction_t *cb_instruction = &m_cb_instructions[cb_opcode];
+    instruction_t& cb_instruction = m_cb_instructions[cb_opcode];
 
-    if (cb_instruction->op_exec == nullptr) {
+    if (cb_instruction.op_exec == nullptr) {
         _op_print_type0("UNKNOWN CB", m_registers.pc, 0, 0);
         m_registers.pc += 2;
         return 0;
     }
 
-    uint64_t cycles = (this->*(cb_instruction->op_exec))(cb_instruction);
+    uint64_t cycles = (this->*(cb_instruction.op_exec))(cb_instruction);
 
     m_registers.pc++;
 
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_nop(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_nop(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, 0, 0);
+    (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
 
-    return instruction->cycles_hi;
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_stop(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_stop(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     // TODO: Implement stop
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, 0, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_halt(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_halt(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     // TODO: Implement halt
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, 0, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_ld(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_ld(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t data = (this->*(instruction->get_operand1))();
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t data = (this->*(instruction.get_operand1))();
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
 
-    (this->*(instruction->set_operand))(addr, data);
+    (this->*(instruction.set_operand))(addr, data);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, data, addr);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, data, addr);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_ldhl(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_ldhl(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    int32_t offset = (this->*(instruction->get_operand1))();
-    int32_t sp = (this->*(instruction->get_operand2))();
+    int32_t offset = (this->*(instruction.get_operand1))();
+    int32_t sp = (this->*(instruction.get_operand2))();
     uint32_t effective_addr = static_cast<uint32_t>(sp + offset);
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_H_16(sp, offset);
     FLAGS_SET_IF_C_16(effective_addr);
 
-    (this->*(instruction->set_operand))(0, static_cast<uint16_t>(effective_addr));
+    (this->*(instruction.set_operand))(0, static_cast<uint16_t>(effective_addr));
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, static_cast<uint16_t>(offset), static_cast<uint16_t>(sp));
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, static_cast<uint16_t>(offset), static_cast<uint16_t>(sp));
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_add8(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_add8(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction->get_operand1))();
-    uint16_t a2 = (this->*(instruction->get_operand2))();
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t a2 = (this->*(instruction.get_operand2))();
     uint16_t sum = a1 + a2;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
@@ -656,51 +656,51 @@ uint64_t gb_cpu::_op_exec_add8(instruction_t *instruction) {
     FLAGS_SET_IF_H(a1, a2);
     FLAGS_SET_IF_C(sum);
 
-    (this->*(instruction->set_operand))(0, sum);
+    (this->*(instruction.set_operand))(0, sum);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, a1, a2);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, a2);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_add16(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_add16(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint32_t a1 = (this->*(instruction->get_operand1))();
-    uint32_t a2 = (this->*(instruction->get_operand2))();
+    uint32_t a1 = (this->*(instruction.get_operand1))();
+    uint32_t a2 = (this->*(instruction.get_operand2))();
     uint32_t sum = a1 + a2;
 
     FLAGS_CLEAR(FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_H_16(a1, a2);
     FLAGS_SET_IF_C_16(sum);
 
-    (this->*(instruction->set_operand))(0, static_cast<uint16_t>(sum));
+    (this->*(instruction.set_operand))(0, static_cast<uint16_t>(sum));
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_addsp(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_addsp(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    int32_t a1 = (this->*(instruction->get_operand1))();
-    int32_t a2 = (this->*(instruction->get_operand2))();
+    int32_t a1 = (this->*(instruction.get_operand1))();
+    int32_t a2 = (this->*(instruction.get_operand2))();
     uint32_t sum = static_cast<uint32_t>(a1 + a2);
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_H_16(a1, a2);
     FLAGS_SET_IF_C_16(sum);
 
-    (this->*(instruction->set_operand))(0, static_cast<uint16_t>(sum));
+    (this->*(instruction.set_operand))(0, static_cast<uint16_t>(sum));
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_adc(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_adc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction->get_operand1))() + (FLAGS_IS_SET(FLAGS_C) ? 1 : 0);
-    uint16_t a2 = (this->*(instruction->get_operand2))();
+    uint16_t a1 = (this->*(instruction.get_operand1))() + (FLAGS_IS_SET(FLAGS_C) ? 1 : 0);
+    uint16_t a2 = (this->*(instruction.get_operand2))();
     uint16_t sum = a1 + a2;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
@@ -708,17 +708,17 @@ uint64_t gb_cpu::_op_exec_adc(instruction_t *instruction) {
     FLAGS_SET_IF_H(a1, a2);
     FLAGS_SET_IF_C(sum);
 
-    (this->*(instruction->set_operand))(0, sum);
+    (this->*(instruction.set_operand))(0, sum);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, a1, a2);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, a2);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_sub(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_sub(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    int16_t a1 = static_cast<int16_t>((this->*(instruction->get_operand1))());
-    int16_t a2 = static_cast<int16_t>((this->*(instruction->get_operand2))());
+    int16_t a1 = static_cast<int16_t>((this->*(instruction.get_operand1))());
+    int16_t a2 = static_cast<int16_t>((this->*(instruction.get_operand2))());
     int16_t sum = a2 - a1;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
@@ -727,19 +727,19 @@ uint64_t gb_cpu::_op_exec_sub(instruction_t *instruction) {
     FLAGS_SET_IF_H(a2, -a1);
     FLAGS_SET_IF_C(sum);
 
-    if (instruction->set_operand != nullptr) {
-        (this->*(instruction->set_operand))(0, static_cast<uint16_t>(sum));
+    if (instruction.set_operand != nullptr) {
+        (this->*(instruction.set_operand))(0, static_cast<uint16_t>(sum));
     }
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_sbc(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_sbc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    int16_t a1 = static_cast<int16_t>((this->*(instruction->get_operand1))() + (FLAGS_IS_SET(FLAGS_C) ? 1 : 0));
-    int16_t a2 = static_cast<int16_t>((this->*(instruction->get_operand2))());
+    int16_t a1 = static_cast<int16_t>((this->*(instruction.get_operand1))() + (FLAGS_IS_SET(FLAGS_C) ? 1 : 0));
+    int16_t a2 = static_cast<int16_t>((this->*(instruction.get_operand2))());
     int16_t sum = a2 - a1;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
@@ -748,132 +748,132 @@ uint64_t gb_cpu::_op_exec_sbc(instruction_t *instruction) {
     FLAGS_SET_IF_H(a2, -a1);
     FLAGS_SET_IF_C(sum);
 
-    (this->*(instruction->set_operand))(0, static_cast<uint16_t>(sum));
+    (this->*(instruction.set_operand))(0, static_cast<uint16_t>(sum));
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_jr(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_jr(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint64_t cycles = instruction->cycles_lo;
-    int16_t offset = static_cast<int8_t>((this->*(instruction->get_operand1))());
+    uint64_t cycles = instruction.cycles_lo;
+    int16_t offset = static_cast<int8_t>((this->*(instruction.get_operand1))());
     uint16_t jump_pc = static_cast<uint16_t>(static_cast<int16_t>(m_registers.pc) + offset);
-    uint16_t do_jump = instruction->get_operand2 == nullptr ? 1 : (this->*(instruction->get_operand2))();
+    uint16_t do_jump = instruction.get_operand2 == nullptr ? 1 : (this->*(instruction.get_operand2))();
 
     if (do_jump != 0) {
-        (this->*(instruction->set_operand))(0, jump_pc);
-        cycles = instruction->cycles_hi;
+        (this->*(instruction.set_operand))(0, jump_pc);
+        cycles = instruction.cycles_hi;
     }
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, jump_pc, 0);
+    (this->*(instruction.op_print))(instruction.disassembly, pc, jump_pc, 0);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_jp(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_jp(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint64_t cycles = instruction->cycles_lo;
-    uint16_t jump_pc = (this->*(instruction->get_operand1))();
-    uint16_t do_jump = instruction->get_operand2 == nullptr ? 1 : (this->*(instruction->get_operand2))();
+    uint64_t cycles = instruction.cycles_lo;
+    uint16_t jump_pc = (this->*(instruction.get_operand1))();
+    uint16_t do_jump = instruction.get_operand2 == nullptr ? 1 : (this->*(instruction.get_operand2))();
 
     if (do_jump != 0) {
-        (this->*(instruction->set_operand))(0, jump_pc);
-        cycles = instruction->cycles_hi;
+        (this->*(instruction.set_operand))(0, jump_pc);
+        cycles = instruction.cycles_hi;
     }
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, jump_pc, 0);
+    (this->*(instruction.op_print))(instruction.disassembly, pc, jump_pc, 0);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_call(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_call(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint64_t cycles = instruction->cycles_lo;
-    uint16_t jump_pc = (this->*(instruction->get_operand1))();
-    uint16_t do_jump = instruction->get_operand2 == nullptr ? 1 : (this->*(instruction->get_operand2))();
+    uint64_t cycles = instruction.cycles_lo;
+    uint16_t jump_pc = (this->*(instruction.get_operand1))();
+    uint16_t do_jump = instruction.get_operand2 == nullptr ? 1 : (this->*(instruction.get_operand2))();
 
     if (do_jump != 0) {
-        (this->*(instruction->set_operand))(0, m_registers.pc);
+        (this->*(instruction.set_operand))(0, m_registers.pc);
         m_registers.pc = jump_pc;
-        cycles = instruction->cycles_hi;
+        cycles = instruction.cycles_hi;
     }
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, jump_pc, 0);
+    (this->*(instruction.op_print))(instruction.disassembly, pc, jump_pc, 0);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_ret(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_ret(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint64_t cycles = instruction->cycles_lo;
-    uint16_t do_jump = instruction->get_operand2 == nullptr ? 1 : (this->*(instruction->get_operand2))();
+    uint64_t cycles = instruction.cycles_lo;
+    uint16_t do_jump = instruction.get_operand2 == nullptr ? 1 : (this->*(instruction.get_operand2))();
 
     if (do_jump != 0) {
-        uint16_t jump_pc = (this->*(instruction->get_operand1))();
-        (this->*(instruction->set_operand))(0, jump_pc);
-        cycles = instruction->cycles_hi;
+        uint16_t jump_pc = (this->*(instruction.get_operand1))();
+        (this->*(instruction.set_operand))(0, jump_pc);
+        cycles = instruction.cycles_hi;
     }
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, 0, 0);
+    (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_reti(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_reti(instruction_t& instruction) {
     // TODO: Enable interrupts
     return gb_cpu::_op_exec_ret(instruction);
 }
 
-uint64_t gb_cpu::_op_exec_rst(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rst(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t jump_pc = (this->*(instruction->get_operand1))();
+    uint16_t jump_pc = (this->*(instruction.get_operand1))();
 
-    (this->*(instruction->set_operand))(0, pc);
+    (this->*(instruction.set_operand))(0, pc);
     m_registers.pc = jump_pc;
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, jump_pc, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, jump_pc, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_da(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_da(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t operand = (this->*(instruction->get_operand1))();
-    (this->*(instruction->set_operand))(0, operand);
+    uint16_t operand = (this->*(instruction.get_operand1))();
+    (this->*(instruction.set_operand))(0, operand);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, operand, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, operand, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rlc(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rlc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = static_cast<uint16_t>((this->*(instruction->get_operand1))() << 1);
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = static_cast<uint16_t>((this->*(instruction.get_operand1))() << 1);
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(val);
 
-    (this->*(instruction->set_operand))(addr, val);
+    (this->*(instruction.set_operand))(addr, val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rlca(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rlca(instruction_t& instruction) {
     uint64_t cycles = _op_exec_rlc(instruction);
     FLAGS_CLEAR(FLAGS_Z);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_rl(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rl(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = static_cast<uint16_t>((this->*(instruction->get_operand1))() << 1);
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = static_cast<uint16_t>((this->*(instruction.get_operand1))() << 1);
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
     int carry = FLAGS_IS_SET(FLAGS_C) ? 1 : 0;
     val |= carry;
 
@@ -881,23 +881,23 @@ uint64_t gb_cpu::_op_exec_rl(instruction_t *instruction) {
     FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(val);
 
-    (this->*(instruction->set_operand))(addr, val);
+    (this->*(instruction.set_operand))(addr, val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rla(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rla(instruction_t& instruction) {
     uint64_t cycles = _op_exec_rl(instruction);
     FLAGS_CLEAR(FLAGS_Z);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_rrc(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rrc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = (this->*(instruction.get_operand1))();
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
     int bit1 = val & 0x1;
     val = val >> 1;
 
@@ -905,23 +905,23 @@ uint64_t gb_cpu::_op_exec_rrc(instruction_t *instruction) {
     FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(bit1 << 8);
 
-    (this->*(instruction->set_operand))(addr, val);
+    (this->*(instruction.set_operand))(addr, val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rrca(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rrca(instruction_t& instruction) {
     uint64_t cycles = _op_exec_rrc(instruction);
     FLAGS_CLEAR(FLAGS_Z);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_rr(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rr(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = (this->*(instruction.get_operand1))();
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
     int bit1 = val & 0x1;
     int carry = FLAGS_IS_SET(FLAGS_C) ? 1 : 0;
     val = static_cast<uint16_t>((val >> 1) | (carry << 0x7));
@@ -930,39 +930,39 @@ uint64_t gb_cpu::_op_exec_rr(instruction_t *instruction) {
     FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(bit1 << 8);
 
-    (this->*(instruction->set_operand))(addr, val);
+    (this->*(instruction.set_operand))(addr, val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rra(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_rra(instruction_t& instruction) {
     uint64_t cycles = _op_exec_rr(instruction);
     FLAGS_CLEAR(FLAGS_Z);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_sla(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_sla(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = static_cast<uint16_t>((this->*(instruction->get_operand1))() << 1);
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = static_cast<uint16_t>((this->*(instruction.get_operand1))() << 1);
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(val);
 
-    (this->*(instruction->set_operand))(addr, val);
+    (this->*(instruction.set_operand))(addr, val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_sra(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_sra(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = (this->*(instruction.get_operand1))();
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
     int bit0 = val & 0x1;
     int bit7 = val & 0x80;
     val = static_cast<uint16_t>((val >> 1) | bit7);
@@ -971,17 +971,17 @@ uint64_t gb_cpu::_op_exec_sra(instruction_t *instruction) {
     FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(bit0 << 0x8);
 
-    (this->*(instruction->set_operand))(addr, val);
+    (this->*(instruction.set_operand))(addr, val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_srl(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_srl(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = (this->*(instruction.get_operand1))();
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
     int bit0 = val & 0x1;
     val = val >> 1;
 
@@ -989,224 +989,224 @@ uint64_t gb_cpu::_op_exec_srl(instruction_t *instruction) {
     FLAGS_SET_IF_Z(val);
     FLAGS_SET_IF_C(bit0 << 0x8);
 
-    (this->*(instruction->set_operand))(addr, val);
+    (this->*(instruction.set_operand))(addr, val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_swap(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_swap(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = (this->*(instruction.get_operand1))();
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
 
     val = static_cast<uint16_t>((val << 4) | (val >> 4));
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(val);
 
-    (this->*(instruction->set_operand))(addr, val);
+    (this->*(instruction.set_operand))(addr, val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_cpl(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_cpl(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
+    uint16_t val = (this->*(instruction.get_operand1))();
 
     FLAGS_SET(FLAGS_N | FLAGS_H);
 
-    (this->*(instruction->set_operand))(0, ~val);
+    (this->*(instruction.set_operand))(0, ~val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_inc(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_inc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
+    uint16_t val = (this->*(instruction.get_operand1))();
 
-    (this->*(instruction->set_operand))(0, ++val);
+    (this->*(instruction.set_operand))(0, ++val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_dec(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_dec(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
+    uint16_t val = (this->*(instruction.get_operand1))();
 
-    (this->*(instruction->set_operand))(0, --val);
+    (this->*(instruction.set_operand))(0, --val);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_incf(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_incf(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = (this->*(instruction.get_operand1))();
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
     uint16_t vali = val + 1;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H);
     FLAGS_SET_IF_Z(vali);
     FLAGS_SET_IF_H(val, 1);
 
-    (this->*(instruction->set_operand))(addr, vali);
+    (this->*(instruction.set_operand))(addr, vali);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_decf(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_decf(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t val = (this->*(instruction->get_operand1))();
-    uint16_t addr = instruction->get_operand2 == nullptr ? 0 : (this->*(instruction->get_operand2))();
+    uint16_t val = (this->*(instruction.get_operand1))();
+    uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
     uint16_t vald = val - 1;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H);
     FLAGS_SET_IF_Z(vald);
     FLAGS_SET_IF_H(val, -1);
 
-    (this->*(instruction->set_operand))(addr, vald);
+    (this->*(instruction.set_operand))(addr, vald);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, val, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, val, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_scf(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_scf(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     FLAGS_CLEAR(FLAGS_N | FLAGS_H);
     FLAGS_SET(FLAGS_C);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, 0, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_ccf(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_ccf(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     FLAGS_CLEAR(FLAGS_N | FLAGS_H);
     FLAGS_TOGGLE(FLAGS_C);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, 0, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_and(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_and(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction->get_operand1))();
-    uint16_t a2 = (this->*(instruction->get_operand2))();
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t a2 = (this->*(instruction.get_operand2))();
     uint16_t result = a1 & a2;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(result);
     FLAGS_SET(FLAGS_H);
 
-    (this->*(instruction->set_operand))(0, result);
+    (this->*(instruction.set_operand))(0, result);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, a1, a2);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, a2);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_xor(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_xor(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction->get_operand1))();
-    uint16_t a2 = (this->*(instruction->get_operand2))();
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t a2 = (this->*(instruction.get_operand2))();
     uint16_t result = a1 ^ a2;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(result);
 
-    (this->*(instruction->set_operand))(0, result);
+    (this->*(instruction.set_operand))(0, result);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, a1, a2);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, a2);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_or(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_or(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction->get_operand1))();
-    uint16_t a2 = (this->*(instruction->get_operand2))();
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t a2 = (this->*(instruction.get_operand2))();
     uint16_t result = a1 | a2;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(result);
 
-    (this->*(instruction->set_operand))(0, result);
+    (this->*(instruction.set_operand))(0, result);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, a1, a1);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, a1);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_bit(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_bit(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction->get_operand1))();
-    uint16_t bit = (this->*(instruction->get_operand2))();
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t bit = (this->*(instruction.get_operand2))();
     uint16_t result = a1 & (1 << bit);
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H);
     FLAGS_SET_IF_Z(result);
     FLAGS_SET(FLAGS_H);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, a1, bit);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, bit);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_set(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_set(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction->get_operand1))();
-    uint16_t bit = (this->*(instruction->get_operand2))();
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t bit = (this->*(instruction.get_operand2))();
     uint16_t result = static_cast<uint16_t>(a1 | (1 << bit));
 
-    (this->*(instruction->set_operand))(0, result);
+    (this->*(instruction.set_operand))(0, result);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, a1, bit);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, bit);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_res(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_res(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction->get_operand1))();
-    uint16_t bit = (this->*(instruction->get_operand2))();
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t bit = (this->*(instruction.get_operand2))();
     uint16_t result = a1 & ~(1 << bit);
 
-    (this->*(instruction->set_operand))(0, result);
+    (this->*(instruction.set_operand))(0, result);
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, a1, bit);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, bit);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_di(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_di(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     // TODO: Disable interrupts
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, 0, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
+    return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_ei(instruction_t *instruction) {
+uint64_t gb_cpu::_op_exec_ei(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     // TODO: Enable interrupts
 
-    (this->*(instruction->op_print))(instruction->disassembly, pc, 0, 0);
-    return instruction->cycles_hi;
+    (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
+    return instruction.cycles_hi;
 }
 
 uint16_t gb_cpu::_operand_get_register_a() {
@@ -1283,7 +1283,7 @@ uint16_t gb_cpu::_operand_get_mem_8() {
 
 uint16_t gb_cpu::_operand_get_mem_8_plus_io_base() {
     uint16_t offset = _operand_get_mem_8();
-    return (offset + GB_MEM_IO_BASE);
+    return (offset + GB_MEMORY_MAP_IO_BASE);
 }
 
 uint16_t gb_cpu::_operand_get_mem_8_plus_io_base_mem() {
@@ -1293,7 +1293,7 @@ uint16_t gb_cpu::_operand_get_mem_8_plus_io_base_mem() {
 
 uint16_t gb_cpu::_operand_get_register_c_plus_io_base() {
     uint16_t offset = _operand_get_register_c();
-    return (offset + GB_MEM_IO_BASE);
+    return (offset + GB_MEMORY_MAP_IO_BASE);
 }
 
 uint16_t gb_cpu::_operand_get_register_c_plus_io_base_mem() {

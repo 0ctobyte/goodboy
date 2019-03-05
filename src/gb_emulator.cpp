@@ -1,7 +1,7 @@
 #include <fstream>
 
 #include "gb_emulator.h"
-#include "gb_memory.h"
+#include "gb_memory_map.h"
 
 gb_emulator::gb_emulator(std::string rom_filename)
     : m_cpu(), m_cycles(0) {
