@@ -2,7 +2,7 @@
 #define GB_EMULATOR_OPTS_H_
 
 #include <string>
-#include <map>
+#include <unordered_map>
 
 class gb_emulator_opts {
 public:
@@ -28,7 +28,7 @@ private:
         "-d          : Run in debugger mode",
         "rom_file    : Gameboy program to run on the emulator"
     };
-    std::map<int, opt_handler_t>   m_opt_map = {
+    std::unordered_map<int, opt_handler_t>   m_opt_map = {
         {'d', &gb_emulator_opts::_opt_set_debugger_flag},
         {'h', &gb_emulator_opts::_opt_print_doc}
     };

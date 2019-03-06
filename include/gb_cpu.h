@@ -5,9 +5,11 @@
 #include <string>
 #include <vector>
 
+#include "gb_memory_map.h"
+
 class gb_cpu {
 public:
-    gb_cpu();
+    gb_cpu(gb_memory_map& memory_map);
     ~gb_cpu();
 
     void dump_registers();
@@ -52,6 +54,7 @@ private:
     registers_t                m_registers;
     std::vector<instruction_t> m_instructions;
     std::vector<instruction_t> m_cb_instructions;
+    gb_memory_map&             m_memory_map;
 
     // Op execution routines
     uint64_t _op_exec_cb(instruction_t& instruction);

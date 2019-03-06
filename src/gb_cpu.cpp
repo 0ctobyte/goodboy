@@ -9,7 +9,7 @@
 #define FLAGS_CLEAR(flags)       { m_registers.f &= ~(flags); }
 #define FLAGS_TOGGLE(flags)      { m_registers.f ^= (flags); }
 
-#define FLAGS_SET_IF_Z(x)        { if ((x) == 0) FLAGS_SET(FLAGS_Z); }
+#define FLAGS_SET_IF_Z(x)        { if (static_cast<uint8_t>((x)) == 0) FLAGS_SET(FLAGS_Z); }
 #define FLAGS_SET_IF_H(x,y)      { if ((((x) & 0x0f) + ((y) & 0x0f)) & 0xf0) FLAGS_SET(FLAGS_H); }
 #define FLAGS_SET_IF_C(x)        { if ((x) & 0xff00) FLAGS_SET(FLAGS_C); }
 
@@ -536,9 +536,17 @@
 /* 0xFF */ {"SET 7, A", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_get_imm_7, nullptr, &gb_cpu::_op_exec_set, 8, 8},\
 }
 
-gb_cpu::gb_cpu() {
+gb_cpu::gb_cpu(gb_memory_map& memory_map)
+    : m_memory_map(memory_map) {
     m_instructions = std::vector<instruction_t>(INSTRUCTIONS_LIST_INIT);
     m_cb_instructions = std::vector<instruction_t>(CB_INSTRUCTIONS_LIST_INIT);
+
+    m_registers.af = 0x01b0;
+    m_registers.bc = 0x0013;
+    m_registers.de = 0x00d8;
+    m_registers.hl = 0x014d;
+    m_registers.sp = 0xfffe;
+    m_registers.pc = 0x0000;
 }
 
 gb_cpu::~gb_cpu() {
@@ -558,7 +566,7 @@ uint16_t gb_cpu::get_pc() {
 }
 
 uint64_t gb_cpu::step() {
-    uint8_t opcode = mem[m_registers.pc];
+    uint8_t opcode = m_memory_map.read_byte(m_registers.pc);
 
     instruction_t& instruction = m_instructions[opcode];
 
@@ -572,7 +580,7 @@ uint64_t gb_cpu::step() {
 }
 
 uint64_t gb_cpu::_op_exec_cb(instruction_t& instruction) {
-    uint8_t cb_opcode = mem[m_registers.pc+1];
+    uint8_t cb_opcode = m_memory_map.read_byte(m_registers.pc+1);
 
     instruction_t& cb_instruction = m_cb_instructions[cb_opcode];
 
@@ -1210,7 +1218,7 @@ uint64_t gb_cpu::_op_exec_ei(instruction_t& instruction) {
 }
 
 uint16_t gb_cpu::_operand_get_register_a() {
-    return m_registers.f;
+    return m_registers.a;
 }
 
 uint16_t gb_cpu::_operand_get_register_f() {
@@ -1278,7 +1286,7 @@ uint16_t gb_cpu::_operand_get_register_hl_minus() {
 }
 
 uint16_t gb_cpu::_operand_get_mem_8() {
-    return mem[m_registers.pc++];
+    return m_memory_map.read_byte(m_registers.pc++);
 }
 
 uint16_t gb_cpu::_operand_get_mem_8_plus_io_base() {
@@ -1288,7 +1296,7 @@ uint16_t gb_cpu::_operand_get_mem_8_plus_io_base() {
 
 uint16_t gb_cpu::_operand_get_mem_8_plus_io_base_mem() {
     uint16_t addr = _operand_get_mem_8_plus_io_base();
-    return mem[addr];
+    return m_memory_map.read_byte(addr);
 }
 
 uint16_t gb_cpu::_operand_get_register_c_plus_io_base() {
@@ -1298,39 +1306,39 @@ uint16_t gb_cpu::_operand_get_register_c_plus_io_base() {
 
 uint16_t gb_cpu::_operand_get_register_c_plus_io_base_mem() {
     uint16_t addr = _operand_get_register_c_plus_io_base();
-    return mem[addr];
+    return m_memory_map.read_byte(addr);
 }
 
 uint16_t gb_cpu::_operand_get_mem_16() {
-    uint16_t byte_lo = mem[m_registers.pc++];
-    uint16_t byte_hi = mem[m_registers.pc++];
+    uint16_t byte_lo = m_memory_map.read_byte(m_registers.pc++);
+    uint16_t byte_hi = m_memory_map.read_byte(m_registers.pc++);
     return static_cast<uint16_t>((byte_hi << 8) | byte_lo);
 }
 
 uint16_t gb_cpu::_operand_get_mem_16_mem() {
     uint16_t addr = _operand_get_mem_16();
-    return mem[addr];
+    return m_memory_map.read_byte(addr);
 }
 
 uint16_t gb_cpu::_operand_get_mem_bc() {
-    return mem[m_registers.bc];
+    return m_memory_map.read_byte(m_registers.bc);
 }
 
 uint16_t gb_cpu::_operand_get_mem_de() {
-    return mem[m_registers.de];
+    return m_memory_map.read_byte(m_registers.de);
 }
 
 uint16_t gb_cpu::_operand_get_mem_hl() {
-    return mem[m_registers.hl];
+    return m_memory_map.read_byte(m_registers.hl);
 }
 
 uint16_t gb_cpu::_operand_get_mem_sp_8() {
-    return mem[m_registers.sp++];
+    return m_memory_map.read_byte(m_registers.sp++);
 }
 
 uint16_t gb_cpu::_operand_get_mem_sp_16() {
-    uint16_t byte_lo = mem[m_registers.sp++];
-    uint16_t byte_hi = mem[m_registers.sp++];
+    uint16_t byte_lo = m_memory_map.read_byte(m_registers.sp++);
+    uint16_t byte_hi = m_memory_map.read_byte(m_registers.sp++);
     return static_cast<uint16_t>((byte_hi << 8) | byte_lo);
 }
 
@@ -1471,7 +1479,7 @@ void gb_cpu::_operand_set_register_pc(uint16_t addr, uint16_t val) {
 }
 
 void gb_cpu::_operand_set_mem_8(uint16_t addr, uint16_t val) {
-    mem[addr] = static_cast<uint8_t>(val);
+    m_memory_map.write_byte(addr, static_cast<uint8_t>(val));
 }
 
 void gb_cpu::_operand_set_mem_hl_8(uint16_t addr, uint16_t val) {
@@ -1479,8 +1487,8 @@ void gb_cpu::_operand_set_mem_hl_8(uint16_t addr, uint16_t val) {
 }
 
 void gb_cpu::_operand_set_mem_sp_16(uint16_t addr, uint16_t val) {
-    mem[--m_registers.sp] = static_cast<uint8_t>(val >> 8);
-    mem[--m_registers.sp] = static_cast<uint8_t>(val);
+    m_memory_map.write_byte(--m_registers.sp, static_cast<uint8_t>(val >> 8));
+    m_memory_map.write_byte(--m_registers.sp, static_cast<uint8_t>(val));
 }
 
 void gb_cpu::_op_print_type0(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {

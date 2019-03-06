@@ -1,7 +1,7 @@
 #ifndef GB_EMULATOR_DEBUGGER_H_
 #define GB_EMULATOR_DEBUGGER_H_
 
-#include <map>
+#include <unordered_map>
 
 #include <ncurses.h>
 
@@ -26,7 +26,7 @@ private:
     int                          m_nwin_max_lines;
     int                          m_nwin_lines;
     int                          m_nwin_cols;
-    std::map<int, key_handler_t> m_key_map = {
+    std::unordered_map<int, key_handler_t> m_key_map = {
         {'n', &gb_emulator_debugger::_debugger_step_once},
         {'r', &gb_emulator_debugger::_debugger_dump_registers},
         {'u', &gb_emulator_debugger::_debugger_scroll_up_half_pg},
