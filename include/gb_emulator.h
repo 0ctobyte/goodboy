@@ -15,6 +15,7 @@ public:
     virtual ~gb_emulator();
 
     virtual bool go();
+    virtual void tracing(bool enable);
 
 protected:
     typedef std::vector<gb_memory_mapped_device*> gb_device_list;

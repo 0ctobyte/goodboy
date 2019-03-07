@@ -9,6 +9,7 @@ public:
     std::string m_program_name;
     std::string m_rom_filename;
     bool        m_debugger;
+    bool        m_tracing;
 
     gb_emulator_opts(int argc, char **argv);
     ~gb_emulator_opts();
@@ -22,17 +23,20 @@ private:
 
     int                            m_argc;
     char**                         m_argv;
-    std::string                    m_opt_str = "hd";
-    std::string                    m_opt_doc[3] = {
+    std::string                    m_opt_str = "hdt";
+    std::string                    m_opt_doc[4] = {
         "-h          : Print this help and exit",
         "-d          : Run in debugger mode",
+        "-t          : Enable tracing",
         "rom_file    : Gameboy program to run on the emulator"
     };
     std::unordered_map<int, opt_handler_t>   m_opt_map = {
+        {'h', &gb_emulator_opts::_opt_print_doc},
         {'d', &gb_emulator_opts::_opt_set_debugger_flag},
-        {'h', &gb_emulator_opts::_opt_print_doc}
+        {'t', &gb_emulator_opts::_opt_set_tracing_flag}
     };
 
+    bool _opt_set_tracing_flag();
     bool _opt_set_debugger_flag();
     bool _opt_print_doc();
 };

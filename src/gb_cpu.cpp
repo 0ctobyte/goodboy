@@ -537,7 +537,7 @@
 }
 
 gb_cpu::gb_cpu(gb_memory_map& memory_map)
-    : m_memory_map(memory_map) {
+    : m_memory_map(memory_map), m_tracing(false) {
     m_instructions = std::vector<instruction_t>(INSTRUCTIONS_LIST_INIT);
     m_cb_instructions = std::vector<instruction_t>(CB_INSTRUCTIONS_LIST_INIT);
 
@@ -563,6 +563,10 @@ void gb_cpu::dump_registers() {
 
 uint16_t gb_cpu::get_pc() {
     return m_registers.pc;
+}
+
+void gb_cpu::tracing(bool enable) {
+    m_tracing = enable;
 }
 
 uint64_t gb_cpu::step() {
@@ -1492,18 +1496,22 @@ void gb_cpu::_operand_set_mem_sp_16(uint16_t addr, uint16_t val) {
 }
 
 void gb_cpu::_op_print_type0(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
-    char out[256];
-    snprintf(out, 256, "%04x: %s", pc, disassembly.c_str());
-    std::string fmt = out;
-    std::cout << fmt << std::endl;
+    if (m_tracing) {
+        char out[256];
+        snprintf(out, 256, "%04x: %s", pc, disassembly.c_str());
+        std::string fmt = out;
+        std::cout << fmt << std::endl;
+    }
 }
 
 void gb_cpu::_op_print_type1(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
-    char buf[256], out[256];
-    snprintf(buf, 256, disassembly.c_str(), operand1);
-    snprintf(out, 256, "%04x: %s", pc, buf);
-    std::string fmt = out;
-    std::cout << fmt << std::endl;
+    if (m_tracing) {
+        char buf[256], out[256];
+        snprintf(buf, 256, disassembly.c_str(), operand1);
+        snprintf(out, 256, "%04x: %s", pc, buf);
+        std::string fmt = out;
+        std::cout << fmt << std::endl;
+    }
 }
 
 void gb_cpu::_op_print_type2(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
@@ -1511,11 +1519,13 @@ void gb_cpu::_op_print_type2(std::string disassembly, uint16_t pc, uint16_t oper
 }
 
 void gb_cpu::_op_print_type3(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
-    char buf[256], out[256];
-    snprintf(buf, 256, disassembly.c_str(), operand2);
-    snprintf(out, 256, "%04x: %s", pc, buf);
-    std::string fmt = out;
-    std::cout << fmt << std::endl;
+    if (m_tracing) {
+        char buf[256], out[256];
+        snprintf(buf, 256, disassembly.c_str(), operand2);
+        snprintf(out, 256, "%04x: %s", pc, buf);
+        std::string fmt = out;
+        std::cout << fmt << std::endl;
+    }
 }
 
 void gb_cpu::_op_print_type4(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {

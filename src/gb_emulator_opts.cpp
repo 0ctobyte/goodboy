@@ -38,6 +38,11 @@ bool gb_emulator_opts::_opt_set_debugger_flag() {
     return true;
 }
 
+bool gb_emulator_opts::_opt_set_tracing_flag() {
+    m_tracing = true;
+    return true;
+}
+
 bool gb_emulator_opts::parse_opts() {
     for (int c = 0; (c = getopt(m_argc, m_argv, m_opt_str.c_str())) != -1; ) {
         try {

@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
         gbm.go();
     } else {
         gb_emulator gbm (options.m_rom_filename);
+        gbm.tracing(options.m_tracing);
         gbm.go();
     }
 

@@ -30,6 +30,10 @@ gb_emulator::~gb_emulator() {
     }
 }
 
+void gb_emulator::tracing(bool enable) {
+    m_cpu.tracing(enable);
+}
+
 bool gb_emulator::go() {
     while (m_cpu.get_pc() >= 0x0100) {
         m_cycles += m_cpu.step();

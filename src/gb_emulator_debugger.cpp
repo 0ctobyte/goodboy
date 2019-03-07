@@ -48,6 +48,9 @@ gb_emulator_debugger::gb_emulator_debugger(std::string rom_filename)
       m_nwin_max_lines(10000),
       m_nwin_lines(0),
       m_nwin_cols(0) {
+    // Enable tracing
+    tracing(true);
+
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
     initscr();
