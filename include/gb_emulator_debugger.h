@@ -20,12 +20,13 @@ public:
 private:
     typedef void (gb_emulator_debugger::*key_handler_t)();
 
-    ncurses_stream              *m_nstream;
-    WINDOW                      *m_nwin;
+    ncurses_stream*              m_nstream;
+    WINDOW*                      m_nwin;
     int                          m_nwin_pos;
     int                          m_nwin_max_lines;
     int                          m_nwin_lines;
     int                          m_nwin_cols;
+    bool                         m_continue;
     std::unordered_map<int, key_handler_t> m_key_map = {
         {'n', &gb_emulator_debugger::_debugger_step_once},
         {'r', &gb_emulator_debugger::_debugger_dump_registers},
@@ -35,6 +36,7 @@ private:
         {'f', &gb_emulator_debugger::_debugger_scroll_dn_full_pg},
         {'G', &gb_emulator_debugger::_debugger_scroll_to_start},
         {'g', &gb_emulator_debugger::_debugger_scroll_to_end},
+        {'c', &gb_emulator_debugger::_debugger_toggle_continue},
         {KEY_UP, &gb_emulator_debugger::_debugger_scroll_up_one_line},
         {KEY_DOWN, &gb_emulator_debugger::_debugger_scroll_dn_one_line}
     };
@@ -49,6 +51,7 @@ private:
     void _debugger_scroll_to_end();
     void _debugger_scroll_up_one_line();
     void _debugger_scroll_dn_one_line();
+    void _debugger_toggle_continue();
 };
 
 #endif // GB_EMULATOR_DEBUGGER_H_

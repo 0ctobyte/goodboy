@@ -53,11 +53,11 @@ gb_emulator_debugger::gb_emulator_debugger(std::string rom_filename)
     initscr();
     noecho();
     curs_set(false);
-    timeout(-1);
 
     m_nwin_lines = getmaxy(stdscr)-1;
     m_nwin_cols = getmaxx(stdscr);
     m_nwin = newpad(m_nwin_max_lines, m_nwin_cols);
+    nodelay(m_nwin, true);
     keypad(m_nwin, true);
     scrollok(m_nwin, true);
     prefresh(m_nwin, 0, 0, 0, 0, m_nwin_lines, m_nwin_cols);
@@ -75,10 +75,15 @@ gb_emulator_debugger::~gb_emulator_debugger() {
 
 bool gb_emulator_debugger::go() {
     for(int c = wgetch(m_nwin); c != 'q'; c = wgetch(m_nwin)) {
+        if (m_continue) {
+            _debugger_step_once();
+        }
+
         try {
             key_handler_t key_handler = m_key_map.at(c);
             (this->*key_handler)();
         } catch (const std::out_of_range& oor) {}
+
         prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines-1, m_nwin_cols);
     }
 
@@ -133,4 +138,8 @@ void gb_emulator_debugger::_debugger_scroll_up_one_line() {
 void gb_emulator_debugger::_debugger_scroll_dn_one_line() {
     // 1 line down
     m_nwin_pos = std::min(m_nwin_pos+1, std::max(0, getcury(m_nwin)-m_nwin_lines));
+}
+
+void gb_emulator_debugger::_debugger_toggle_continue() {
+    m_continue = m_continue ? false : true;
 }

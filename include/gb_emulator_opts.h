@@ -21,7 +21,7 @@ private:
     typedef bool (gb_emulator_opts::*opt_handler_t)();
 
     int                            m_argc;
-    char                         **m_argv;
+    char**                         m_argv;
     std::string                    m_opt_str = "hd";
     std::string                    m_opt_doc[3] = {
         "-h          : Print this help and exit",

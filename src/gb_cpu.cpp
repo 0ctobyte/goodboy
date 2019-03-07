@@ -251,14 +251,14 @@
 /* 0xE6 */ {"AND 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_and, 8, 8},\
 /* 0xE7 */ {"RST 20H", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_rst_20, nullptr, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_rst, 16, 16},\
 /* 0xE8 */ {"ADD SP, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_sp, &gb_cpu::_operand_set_register_sp, &gb_cpu::_op_exec_addsp, 16, 16},\
-/* 0xE9 */ {"JP (HL)", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_hl, nullptr, &gb_cpu::_operand_set_register_pc, &gb_cpu::_op_exec_jp, 4, 4},\
+/* 0xE9 */ {"JP HL", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_hl, nullptr, &gb_cpu::_operand_set_register_pc, &gb_cpu::_op_exec_jp, 4, 4},\
 /* 0xEA */ {"LD (0x%04x), A", &gb_cpu::_op_print_type3, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_get_mem_16, &gb_cpu::_operand_set_mem_8, &gb_cpu::_op_exec_ld, 16, 16},\
 /* 0xEB */ {"UNKOWN", &gb_cpu::_op_print_type0, nullptr, nullptr, nullptr, nullptr, 0, 0},\
 /* 0xEC */ {"UNKOWN", &gb_cpu::_op_print_type0, nullptr, nullptr, nullptr, nullptr, 0, 0},\
 /* 0xED */ {"UNKOWN", &gb_cpu::_op_print_type0, nullptr, nullptr, nullptr, nullptr, 0, 0},\
 /* 0xEE */ {"XOR 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_xor, 8, 8},\
 /* 0xEF */ {"RST 28H", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_rst_28, nullptr, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_rst, 16, 16},\
-/* 0xF0 */ {"LD A, (0x%02x)", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8_plus_io_base_mem, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_ld, 12, 12},\
+/* 0xF0 */ {"LD A, (0xff00+0x%02x)", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8_plus_io_base_mem, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_ld, 12, 12},\
 /* 0xF1 */ {"POP AF", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_sp_16, nullptr, &gb_cpu::_operand_set_register_af, &gb_cpu::_op_exec_ld, 12, 12},\
 /* 0xF2 */ {"LD A, (0xff00+C)", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_c_plus_io_base_mem, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_ld, 8, 8},\
 /* 0xF3 */ {"DI", &gb_cpu::_op_print_type0, nullptr, nullptr, nullptr, &gb_cpu::_op_exec_di, 4, 4},\
@@ -546,7 +546,7 @@ gb_cpu::gb_cpu(gb_memory_map& memory_map)
     m_registers.de = 0x00d8;
     m_registers.hl = 0x014d;
     m_registers.sp = 0xfffe;
-    m_registers.pc = 0x0000;
+    m_registers.pc = 0x0100;
 }
 
 gb_cpu::~gb_cpu() {
@@ -1427,11 +1427,11 @@ void gb_cpu::_operand_set_register_a(uint16_t addr, uint16_t val) {
 }
 
 void gb_cpu::_operand_set_register_f(uint16_t addr, uint16_t val) {
-    m_registers.f = static_cast<uint8_t>(val);
+    m_registers.f = (static_cast<uint8_t>(val) & 0xF0);
 }
 
 void gb_cpu::_operand_set_register_af(uint16_t addr, uint16_t val) {
-    m_registers.af = val;
+    m_registers.af = (val & 0xFFF0);
 }
 
 void gb_cpu::_operand_set_register_b(uint16_t addr, uint16_t val) {

@@ -31,7 +31,7 @@ gb_emulator::~gb_emulator() {
 }
 
 bool gb_emulator::go() {
-    while (m_cpu.get_pc() < 0xFE00) {
+    while (m_cpu.get_pc() >= 0x0100) {
         m_cycles += m_cpu.step();
     }
 
