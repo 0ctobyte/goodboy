@@ -3,18 +3,22 @@
 #include "gb_cpu.h"
 #include "gb_memory_map.h"
 
-#define FLAGS_IS_SET(flags)      ((m_registers.f & (flags)) != 0)
-#define FLAGS_IS_CLEAR(flags)    ((m_registers.f & (flags)) == 0)
-#define FLAGS_SET(flags)         { m_registers.f |= (flags); }
-#define FLAGS_CLEAR(flags)       { m_registers.f &= ~(flags); }
-#define FLAGS_TOGGLE(flags)      { m_registers.f ^= (flags); }
+#define FLAGS_IS_SET(flags)         ((m_registers.f & (flags)) != 0)
+#define FLAGS_IS_CLEAR(flags)       ((m_registers.f & (flags)) == 0)
+#define FLAGS_SET(flags)            { m_registers.f |= (flags); }
+#define FLAGS_CLEAR(flags)          { m_registers.f &= ~(flags); }
+#define FLAGS_TOGGLE(flags)         { m_registers.f ^= (flags); }
 
-#define FLAGS_SET_IF_Z(x)        { if (static_cast<uint8_t>((x)) == 0) FLAGS_SET(FLAGS_Z); }
-#define FLAGS_SET_IF_H(x,y)      { if ((((x) & 0x0f) + ((y) & 0x0f)) & 0xf0) FLAGS_SET(FLAGS_H); }
-#define FLAGS_SET_IF_C(x)        { if ((x) & 0xff00) FLAGS_SET(FLAGS_C); }
+#define FLAGS_SET_IF_Z(x)           { if (static_cast<uint8_t>((x)) == 0) FLAGS_SET(FLAGS_Z); }
+#define FLAGS_SET_IF_H(x,y)         { if ((((x) & 0x0f) + ((y) & 0x0f)) & 0xf0) FLAGS_SET(FLAGS_H); }
+#define FLAGS_SET_IF_C(x)           { if ((x) & 0xff00) FLAGS_SET(FLAGS_C); }
 
-#define FLAGS_SET_IF_H_16(x,y)   { if ((((x) & 0xfff) + ((y) & 0xfff)) & 0xf000) FLAGS_SET(FLAGS_H); }
-#define FLAGS_SET_IF_C_16(x)     { if ((x) & 0xffff0000) FLAGS_SET(FLAGS_C); }
+#define FLAGS_SET_IF_H_16(x,y)      { if ((((x) & 0xfff) + ((y) & 0xfff)) & 0xf000) FLAGS_SET(FLAGS_H); }
+#define FLAGS_SET_IF_C_16(x)        { if ((x) & 0xffff0000) FLAGS_SET(FLAGS_C); }
+
+#define FLAGS_SET_IF_H_BORROW(x,y)  { if (((x) & 0x0f) > ((y) & 0x0f)) FLAGS_SET(FLAGS_H); }
+#define FLAGS_SET_IF_C_BORROW(x,y)  { if ((x) > (y)) FLAGS_SET(FLAGS_C); }
+
 
 #define INSTRUCTIONS_LIST_INIT \
 {\
@@ -224,7 +228,7 @@
 /* 0xCB */ {"CB", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_8, nullptr, nullptr, &gb_cpu::_op_exec_cb, 4, 4},\
 /* 0xCC */ {"CALL Z, 0x%04x", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_16, &gb_cpu::_operand_get_flags_is_z, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_call, 24, 12},\
 /* 0xCD */ {"CALL 0x%04x", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_16, nullptr, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_call, 24, 24},\
-/* 0xCE */ {"ADC A, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_adc, 8, 8},\
+/* 0xCE */ {"ADC A, 0x%02x", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_adc, 8, 8},\
 /* 0xCF */ {"RST 08H", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_rst_08, nullptr, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_rst, 16, 16},\
 /* 0xD0 */ {"RET NC", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_sp_16, &gb_cpu::_operand_get_flags_is_nc, &gb_cpu::_operand_set_register_pc, &gb_cpu::_op_exec_ret, 20, 8},\
 /* 0xD1 */ {"POP DE", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_sp_16, nullptr, &gb_cpu::_operand_set_register_de, &gb_cpu::_op_exec_ld, 12, 12},\
@@ -240,7 +244,7 @@
 /* 0xDB */ {"UNKOWN", &gb_cpu::_op_print_type0, nullptr, nullptr, nullptr, nullptr, 0, 0},\
 /* 0xDC */ {"CALL C, 0x%04x", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_16, &gb_cpu::_operand_get_flags_is_c, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_call, 24, 12},\
 /* 0xDD */ {"UNKOWN", &gb_cpu::_op_print_type0, nullptr, nullptr, nullptr, nullptr, 0, 0},\
-/* 0xDE */ {"SBC A, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_16, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_sbc, 8, 8},\
+/* 0xDE */ {"SBC A, 0x%02x", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_sbc, 8, 8},\
 /* 0xDF */ {"RST 18H", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_rst_18, nullptr, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_rst, 16, 16},\
 /* 0xE0 */ {"LD (0xff00+0x%02x), A", &gb_cpu::_op_print_type4, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_get_mem_8_plus_io_base, &gb_cpu::_operand_set_mem_8, &gb_cpu::_op_exec_ld, 12, 12},\
 /* 0xE1 */ {"POP HL", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_sp_16, nullptr, &gb_cpu::_operand_set_register_hl, &gb_cpu::_op_exec_ld, 12, 12},\
@@ -711,14 +715,15 @@ uint64_t gb_cpu::_op_exec_addsp(instruction_t& instruction) {
 uint64_t gb_cpu::_op_exec_adc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t a1 = (this->*(instruction.get_operand1))() + (FLAGS_IS_SET(FLAGS_C) ? 1 : 0);
+    uint8_t carry = FLAGS_IS_SET(FLAGS_C) ? 1 : 0;
+    uint16_t a1 = (this->*(instruction.get_operand1))();
     uint16_t a2 = (this->*(instruction.get_operand2))();
-    uint16_t sum = a1 + a2;
+    uint16_t sum = a1 + a2 + carry;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(sum);
-    FLAGS_SET_IF_H(a1, a2);
     FLAGS_SET_IF_C(sum);
+    if (((a1 & 0x0f) + (a2 & 0x0f) + carry) & 0xf0) FLAGS_SET(FLAGS_H);
 
     (this->*(instruction.set_operand))(0, sum);
 
@@ -729,40 +734,41 @@ uint64_t gb_cpu::_op_exec_adc(instruction_t& instruction) {
 uint64_t gb_cpu::_op_exec_sub(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    int16_t a1 = static_cast<int16_t>((this->*(instruction.get_operand1))());
-    int16_t a2 = static_cast<int16_t>((this->*(instruction.get_operand2))());
-    int16_t sum = a2 - a1;
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t a2 = (this->*(instruction.get_operand2))();
+    uint16_t sum = a2 - a1;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(sum);
     FLAGS_SET(FLAGS_N);
-    FLAGS_SET_IF_H(a2, -a1);
-    FLAGS_SET_IF_C(sum);
+    FLAGS_SET_IF_H_BORROW(a1, a2);
+    FLAGS_SET_IF_C_BORROW(a1, a2);
 
     if (instruction.set_operand != nullptr) {
-        (this->*(instruction.set_operand))(0, static_cast<uint16_t>(sum));
+        (this->*(instruction.set_operand))(0, sum);
     }
 
-    (this->*(instruction.op_print))(instruction.disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, a2);
     return instruction.cycles_hi;
 }
 
 uint64_t gb_cpu::_op_exec_sbc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    int16_t a1 = static_cast<int16_t>((this->*(instruction.get_operand1))() + (FLAGS_IS_SET(FLAGS_C) ? 1 : 0));
-    int16_t a2 = static_cast<int16_t>((this->*(instruction.get_operand2))());
-    int16_t sum = a2 - a1;
+    uint16_t carry = FLAGS_IS_SET(FLAGS_C) ? 1 : 0;
+    uint16_t a1 = (this->*(instruction.get_operand1))();
+    uint16_t a2 = (this->*(instruction.get_operand2))();
+    uint16_t sum = a2 - (a1 + carry);
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(sum);
     FLAGS_SET(FLAGS_N);
-    FLAGS_SET_IF_H(a2, -a1);
-    FLAGS_SET_IF_C(sum);
+    if (((a1 & 0x0f) + carry) > (a2 & 0x0f)) FLAGS_SET(FLAGS_H);
+    if ((a1 + carry) > a2) FLAGS_SET(FLAGS_C);
 
-    (this->*(instruction.set_operand))(0, static_cast<uint16_t>(sum));
+    (this->*(instruction.set_operand))(0, sum);
 
-    (this->*(instruction.op_print))(instruction.disassembly, pc, static_cast<uint16_t>(a1), static_cast<uint16_t>(a2));
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a1, a2);
     return instruction.cycles_hi;
 }
 
@@ -884,6 +890,7 @@ uint64_t gb_cpu::_op_exec_rlc(instruction_t& instruction) {
 
     uint16_t val = static_cast<uint16_t>((this->*(instruction.get_operand1))() << 1);
     uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
+    val |= ((val >> 8) & 0x1);
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(val);
@@ -931,7 +938,7 @@ uint64_t gb_cpu::_op_exec_rrc(instruction_t& instruction) {
     uint16_t val = (this->*(instruction.get_operand1))();
     uint16_t addr = instruction.get_operand2 == nullptr ? 0 : (this->*(instruction.get_operand2))();
     int bit1 = val & 0x1;
-    val = val >> 1;
+    val = static_cast<uint16_t>((val >> 1) | (bit1 << 7));
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
     FLAGS_SET_IF_Z(val);
@@ -1105,7 +1112,8 @@ uint64_t gb_cpu::_op_exec_decf(instruction_t& instruction) {
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H);
     FLAGS_SET_IF_Z(vald);
-    FLAGS_SET_IF_H(val, -1);
+    FLAGS_SET(FLAGS_N);
+    FLAGS_SET_IF_H_BORROW(1, val);
 
     (this->*(instruction.set_operand))(addr, vald);
 
