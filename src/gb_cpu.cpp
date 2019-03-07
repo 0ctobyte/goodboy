@@ -57,7 +57,7 @@
 /* 0x24 */ {"INC H", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_h, nullptr, &gb_cpu::_operand_set_register_h, &gb_cpu::_op_exec_incf, 4, 4},\
 /* 0x25 */ {"DEC H", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_h, nullptr, &gb_cpu::_operand_set_register_h, &gb_cpu::_op_exec_decf, 4, 4},\
 /* 0x26 */ {"LD H, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, nullptr, &gb_cpu::_operand_set_register_h, &gb_cpu::_op_exec_ld, 8, 8},\
-/* 0x27 */ {"DA A", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_da, 4, 4},\
+/* 0x27 */ {"DAA", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_da, 4, 4},\
 /* 0x28 */ {"JR Z, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_flags_is_z, &gb_cpu::_operand_set_register_pc, &gb_cpu::_op_exec_jr, 12, 8},\
 /* 0x29 */ {"ADD HL, HL", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_hl, &gb_cpu::_operand_get_register_hl, &gb_cpu::_operand_set_register_hl, &gb_cpu::_op_exec_add16, 8, 8},\
 /* 0x2A */ {"LD A, (HL+)", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_hl, &gb_cpu::_operand_get_register_hl_plus, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_ld, 8, 8},\
@@ -852,10 +852,30 @@ uint64_t gb_cpu::_op_exec_rst(instruction_t& instruction) {
 uint64_t gb_cpu::_op_exec_da(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint16_t operand = (this->*(instruction.get_operand1))();
-    (this->*(instruction.set_operand))(0, operand);
+    uint16_t a = (this->*(instruction.get_operand1))();
 
-    (this->*(instruction.op_print))(instruction.disassembly, pc, operand, 0);
+    // Good explanation for this instruction here: https://ehaskins.com/2018-01-30%20Z80%20DAA/
+    if (FLAGS_IS_SET(FLAGS_N)) {
+        // Subtraction case; adjust top nibble if C flag is set
+        // adjust bottom nibble if H flag is set. Adjustment is done by subtracting 0x6.
+        if (FLAGS_IS_SET(FLAGS_H)) a = (a - 0x06) & 0xff;
+        if (FLAGS_IS_SET(FLAGS_C)) a -= 0x60;
+    } else {
+        // Addition case; adjust top nibble if C flag is set or result is > 0x99
+        // which is the largest # that can be represented by 8-bit BCD.
+        // Adjust bottom nibble if H flag is set or if > 0x9. 0x9 is the largest each nibble
+        // can represent.
+        if (FLAGS_IS_SET(FLAGS_H) || (a & 0x0f) > 0x09) a += 0x06;
+        if (FLAGS_IS_SET(FLAGS_C) || a > 0x9F) a += 0x60;
+    }
+
+    FLAGS_CLEAR(FLAGS_Z | FLAGS_H);
+    FLAGS_SET_IF_Z(a);
+    FLAGS_SET_IF_C(a);
+
+    (this->*(instruction.set_operand))(0, a);
+
+    (this->*(instruction.op_print))(instruction.disassembly, pc, a, 0);
     return instruction.cycles_hi;
 }
 
