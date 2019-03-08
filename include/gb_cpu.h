@@ -173,6 +173,7 @@ private:
     void _operand_set_register_sp(uint16_t addr, uint16_t val);
     void _operand_set_register_pc(uint16_t addr, uint16_t val);
     void _operand_set_mem_8(uint16_t addr, uint16_t val);
+    void _operand_set_mem_16(uint16_t addr, uint16_t val);
     void _operand_set_mem_hl_8(uint16_t addr, uint16_t val);
     void _operand_set_mem_sp_16(uint16_t addr, uint16_t val);
 

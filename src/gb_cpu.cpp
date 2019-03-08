@@ -30,7 +30,7 @@
 /* 0x05 */ {"DEC B", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_b, nullptr, &gb_cpu::_operand_set_register_b, &gb_cpu::_op_exec_decf, 4, 4},\
 /* 0x06 */ {"LD B, 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, nullptr, &gb_cpu::_operand_set_register_b, &gb_cpu::_op_exec_ld, 8, 8},\
 /* 0x07 */ {"RLCA", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_a, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_rlca, 4, 4},\
-/* 0x08 */ {"LD (0x%04x), SP", &gb_cpu::_op_print_type3, &gb_cpu::_operand_get_register_sp, &gb_cpu::_operand_get_mem_16, &gb_cpu::_operand_set_mem_8, &gb_cpu::_op_exec_ld, 20, 20},\
+/* 0x08 */ {"LD (0x%04x), SP", &gb_cpu::_op_print_type3, &gb_cpu::_operand_get_register_sp, &gb_cpu::_operand_get_mem_16, &gb_cpu::_operand_set_mem_16, &gb_cpu::_op_exec_ld, 20, 20},\
 /* 0x09 */ {"ADD HL, BC", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_bc, &gb_cpu::_operand_get_register_hl, &gb_cpu::_operand_set_register_hl, &gb_cpu::_op_exec_add16, 8, 8},\
 /* 0x0A */ {"LD A, (BC)", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_mem_bc, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_ld, 8, 8},\
 /* 0x0B */ {"DEC BC", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_bc, nullptr, &gb_cpu::_operand_set_register_bc, &gb_cpu::_op_exec_dec, 8, 8},\
@@ -270,7 +270,7 @@
 /* 0xF5 */ {"PUSH AF", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_af, nullptr, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_ld, 16, 16},\
 /* 0xF6 */ {"OR 0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_a, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_or, 8, 8},\
 /* 0xF7 */ {"RST 30H", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_rst_30, nullptr, &gb_cpu::_operand_set_mem_sp_16, &gb_cpu::_op_exec_rst, 16, 16},\
-/* 0xF8 */ {"LD HL, SP+0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_sp, &gb_cpu::_operand_set_register_hl, &gb_cpu::_op_exec_ldhl, 12, 12},\
+/* 0xF8 */ {"LD HL, SP+0x%02x", &gb_cpu::_op_print_type2, &gb_cpu::_operand_get_mem_8, &gb_cpu::_operand_get_register_sp, &gb_cpu::_operand_set_register_hl, &gb_cpu::_op_exec_addsp, 12, 12},\
 /* 0xF9 */ {"LD SP, HL", &gb_cpu::_op_print_type0, &gb_cpu::_operand_get_register_hl, nullptr, &gb_cpu::_operand_set_register_sp, &gb_cpu::_op_exec_ld, 8, 8},\
 /* 0xFA */ {"LD A, (0x%04x)", &gb_cpu::_op_print_type1, &gb_cpu::_operand_get_mem_16_mem, nullptr, &gb_cpu::_operand_set_register_a, &gb_cpu::_op_exec_ld, 16, 16},\
 /* 0xFB */ {"EI", &gb_cpu::_op_print_type0, nullptr, nullptr, nullptr, &gb_cpu::_op_exec_ei, 4, 4},\
@@ -643,23 +643,6 @@ uint64_t gb_cpu::_op_exec_ld(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_ldhl(instruction_t& instruction) {
-    uint16_t pc = m_registers.pc++;
-
-    int32_t offset = (this->*(instruction.get_operand1))();
-    int32_t sp = (this->*(instruction.get_operand2))();
-    uint32_t effective_addr = static_cast<uint32_t>(sp + offset);
-
-    FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
-    FLAGS_SET_IF_H_16(sp, offset);
-    FLAGS_SET_IF_C_16(effective_addr);
-
-    (this->*(instruction.set_operand))(0, static_cast<uint16_t>(effective_addr));
-
-    (this->*(instruction.op_print))(instruction.disassembly, pc, static_cast<uint16_t>(offset), static_cast<uint16_t>(sp));
-    return instruction.cycles_hi;
-}
-
 uint64_t gb_cpu::_op_exec_add8(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
@@ -698,13 +681,13 @@ uint64_t gb_cpu::_op_exec_add16(instruction_t& instruction) {
 uint64_t gb_cpu::_op_exec_addsp(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    int32_t a1 = (this->*(instruction.get_operand1))();
-    int32_t a2 = (this->*(instruction.get_operand2))();
-    uint32_t sum = static_cast<uint32_t>(a1 + a2);
+    int32_t a1 = static_cast<int32_t>(static_cast<int8_t>((this->*(instruction.get_operand1))()));
+    int32_t a2 = static_cast<int32_t>((this->*(instruction.get_operand2))());
+    int32_t sum = a1 + a2;
 
     FLAGS_CLEAR(FLAGS_Z | FLAGS_N | FLAGS_H | FLAGS_C);
-    FLAGS_SET_IF_H_16(a1, a2);
-    FLAGS_SET_IF_C_16(sum);
+    FLAGS_SET_IF_H(a1, a2);
+    FLAGS_SET_IF_C((a1 & 0xff) + (a2 & 0xff));
 
     (this->*(instruction.set_operand))(0, static_cast<uint16_t>(sum));
 
@@ -848,7 +831,7 @@ uint64_t gb_cpu::_op_exec_rst(instruction_t& instruction) {
 
     uint16_t jump_pc = (this->*(instruction.get_operand1))();
 
-    (this->*(instruction.set_operand))(0, pc);
+    (this->*(instruction.set_operand))(0, m_registers.pc);
     m_registers.pc = jump_pc;
 
     (this->*(instruction.op_print))(instruction.disassembly, pc, jump_pc, 0);
@@ -1512,6 +1495,11 @@ void gb_cpu::_operand_set_register_pc(uint16_t addr, uint16_t val) {
 
 void gb_cpu::_operand_set_mem_8(uint16_t addr, uint16_t val) {
     m_memory_map.write_byte(addr, static_cast<uint8_t>(val));
+}
+
+void gb_cpu::_operand_set_mem_16(uint16_t addr, uint16_t val) {
+    _operand_set_mem_8(addr, static_cast<uint8_t>(val & 0xff));
+    _operand_set_mem_8(addr+1, static_cast<uint8_t>(val >> 8));
 }
 
 void gb_cpu::_operand_set_mem_hl_8(uint16_t addr, uint16_t val) {
