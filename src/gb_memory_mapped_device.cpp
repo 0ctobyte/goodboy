@@ -1,6 +1,5 @@
 #include <sstream>
 #include <stdexcept>
-#include <iostream>
 
 #include "gb_memory_mapped_device.h"
 

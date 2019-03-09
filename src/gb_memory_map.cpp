@@ -1,6 +1,6 @@
-#include <iostream>
 #include <algorithm>
 
+#include "gb_logger.h"
 #include "gb_memory_map.h"
 
 #define GB_MEMORY_MAP_WKRAM_START       (0xC000)
@@ -72,7 +72,7 @@ uint8_t gb_memory_map::read_byte(uint16_t addr) {
     }
 
     if (device == nullptr) {
-        std::cout << "read_byte: Address not implemented: " << std::hex << addr << std::endl;
+        GB_LOGGER(GB_LOG_WARN) << "read_byte: Address not implemented: " << std::hex << addr << std::endl;
         return 0;
     }
 
@@ -96,7 +96,7 @@ void gb_memory_map::write_byte(uint16_t addr, uint8_t data) {
     }
 
     if (device == nullptr) {
-        std::cout << "write_byte: Address not implemented: " << std::hex << addr << std::endl;
+        GB_LOGGER(GB_LOG_WARN) << "write_byte: Address not implemented: " << std::hex << addr << std::endl;
     } else {
         device->write_byte(naddr, data);
     }

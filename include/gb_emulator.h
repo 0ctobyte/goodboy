@@ -16,7 +16,6 @@ public:
 
     virtual bool go();
     virtual bool load_rom(std::string rom_filename);
-    virtual void tracing(bool enable);
 
 protected:
     typedef std::vector<gb_memory_mapped_device*> gb_device_list;

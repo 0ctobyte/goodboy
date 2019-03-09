@@ -14,7 +14,6 @@ public:
 
     void dump_registers();
     uint16_t get_pc();
-    void tracing(bool enable);
     uint64_t step();
 
 private:
@@ -62,7 +61,6 @@ private:
     std::vector<instruction_t> m_instructions;
     std::vector<instruction_t> m_cb_instructions;
     gb_memory_map&             m_memory_map;
-    bool                       m_tracing;
     eidiflag_t                 m_eidi_flag;
     bool                       m_interrupt_enable;
 

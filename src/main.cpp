@@ -1,5 +1,4 @@
-#include <iostream>
-
+#include "gb_logger.h"
 #include "gb_emulator_opts.h"
 #include "gb_emulator_debugger.h"
 
@@ -10,16 +9,17 @@ int main(int argc, char **argv) {
 
     if (options.m_debugger) {
         gb_emulator_debugger gbm;
+        gb_logger::instance().set_level(GB_LOG_DEBUG);
         if (!gbm.load_rom(options.m_rom_filename)) {
-            std::cout << "Not a valid ROM file: " << options.m_rom_filename << std::endl;
+            GB_LOGGER(GB_LOG_FATAL) << "Not a valid ROM file: " << options.m_rom_filename << std::endl;
             return EXIT_FAILURE;
         }
         gbm.go();
     } else {
         gb_emulator gbm;
-        gbm.tracing(options.m_tracing);
+        if (options.m_tracing) gb_logger::instance().set_level(GB_LOG_DEBUG);
         if (!gbm.load_rom(options.m_rom_filename)) {
-            std::cout << "Not a valid ROM file: " << options.m_rom_filename << std::endl;
+            GB_LOGGER(GB_LOG_FATAL) << "Not a valid ROM file: " << options.m_rom_filename << std::endl;
             return EXIT_FAILURE;
         }
         gbm.go();

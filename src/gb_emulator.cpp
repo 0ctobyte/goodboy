@@ -34,10 +34,6 @@ bool gb_emulator::load_rom(std::string rom_filename) {
     return true;
 }
 
-void gb_emulator::tracing(bool enable) {
-    m_cpu.tracing(enable);
-}
-
 bool gb_emulator::go() {
     unsigned instruction_count = 0;
     while (1) {

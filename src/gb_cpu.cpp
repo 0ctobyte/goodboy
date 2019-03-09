@@ -1,5 +1,4 @@
-#include <iostream>
-
+#include "gb_logger.h"
 #include "gb_cpu.h"
 #include "gb_memory_map.h"
 
@@ -542,7 +541,6 @@
 
 gb_cpu::gb_cpu(gb_memory_map& memory_map)
     : m_memory_map(memory_map),
-      m_tracing(false),
       m_eidi_flag(EIDI_NONE),
       m_interrupt_enable(true)
 {
@@ -566,15 +564,11 @@ void gb_cpu::dump_registers() {
         m_registers.a, m_registers.f, m_registers.b, m_registers.c, m_registers.d, m_registers.e, m_registers.h, m_registers.l, m_registers.sp, m_registers.pc,
         FLAGS_IS_SET(FLAGS_Z) ? 'Z' : '-', FLAGS_IS_SET(FLAGS_N) ? 'N' : '-', FLAGS_IS_SET(FLAGS_H) ? 'H' : '-', FLAGS_IS_SET(FLAGS_C) ? 'C' : '-');
 
-    std::cout << buf << std::endl;
+    GB_LOGGER(GB_LOG_DEBUG) << buf << std::endl;
 }
 
 uint16_t gb_cpu::get_pc() {
     return m_registers.pc;
-}
-
-void gb_cpu::tracing(bool enable) {
-    m_tracing = enable;
 }
 
 uint64_t gb_cpu::step() {
@@ -1520,22 +1514,18 @@ void gb_cpu::_operand_set_mem_sp_16(uint16_t addr, uint16_t val) {
 }
 
 void gb_cpu::_op_print_type0(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
-    if (m_tracing) {
-        char out[256];
-        snprintf(out, 256, "%04x: %s", pc, disassembly.c_str());
-        std::string fmt = out;
-        std::cout << fmt << std::endl;
-    }
+    char out[256];
+    snprintf(out, 256, "%04x: %s", pc, disassembly.c_str());
+    std::string fmt = out;
+    GB_LOGGER(GB_LOG_DEBUG) << fmt << std::endl;
 }
 
 void gb_cpu::_op_print_type1(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
-    if (m_tracing) {
-        char buf[256], out[256];
-        snprintf(buf, 256, disassembly.c_str(), operand1);
-        snprintf(out, 256, "%04x: %s", pc, buf);
-        std::string fmt = out;
-        std::cout << fmt << std::endl;
-    }
+    char buf[256], out[256];
+    snprintf(buf, 256, disassembly.c_str(), operand1);
+    snprintf(out, 256, "%04x: %s", pc, buf);
+    std::string fmt = out;
+    GB_LOGGER(GB_LOG_DEBUG) << fmt << std::endl;
 }
 
 void gb_cpu::_op_print_type2(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
@@ -1543,13 +1533,11 @@ void gb_cpu::_op_print_type2(std::string disassembly, uint16_t pc, uint16_t oper
 }
 
 void gb_cpu::_op_print_type3(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
-    if (m_tracing) {
-        char buf[256], out[256];
-        snprintf(buf, 256, disassembly.c_str(), operand2);
-        snprintf(out, 256, "%04x: %s", pc, buf);
-        std::string fmt = out;
-        std::cout << fmt << std::endl;
-    }
+    char buf[256], out[256];
+    snprintf(buf, 256, disassembly.c_str(), operand2);
+    snprintf(out, 256, "%04x: %s", pc, buf);
+    std::string fmt = out;
+    GB_LOGGER(GB_LOG_DEBUG) << fmt << std::endl;
 }
 
 void gb_cpu::_op_print_type4(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
