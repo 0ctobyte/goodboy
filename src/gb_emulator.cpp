@@ -3,31 +3,35 @@
 
 #include "gb_emulator.h"
 
-#include "gb_test_ram.h"
+#include "gb_ram.h"
 
-gb_emulator::gb_emulator(std::string rom_filename)
+gb_emulator::gb_emulator()
     : m_memory_map(), m_cpu(m_memory_map), m_cycles(0) {
+}
+
+gb_emulator::~gb_emulator() {
+}
+
+bool gb_emulator::load_rom(std::string rom_filename) {
     std::ifstream rom_file (rom_filename, std::ifstream::binary);
+
+    if (!rom_file) return false;
 
     rom_file.seekg(0, rom_file.end);
     m_binsize = std::min(static_cast<int>(rom_file.tellg()), 0x10000);
     rom_file.seekg(0, rom_file.beg);
 
-    gb_test_ram *test_ram = new gb_test_ram();
+    gb_ram* ram = new gb_ram(0x0000, 0x10000);
 
-    rom_file.read(reinterpret_cast<char*>(test_ram->m_mem), m_binsize);
+    rom_file.read(reinterpret_cast<char*>(ram->get_mem()), m_binsize);
 
     rom_file.close();
 
-    m_device_list.push_back(static_cast<gb_memory_mapped_device*>(test_ram));
-    m_memory_map.add_readable_device(test_ram, 0x0000, 0xFFFF);
-    m_memory_map.add_writeable_device(test_ram, 0x0000, 0xFFFF);
-}
+    m_device_list.push_back(static_cast<gb_memory_mapped_device*>(ram));
+    m_memory_map.add_readable_device(ram, 0x0000, 0x10000);
+    m_memory_map.add_writeable_device(ram, 0x0000, 0x10000);
 
-gb_emulator::~gb_emulator() {
-    for (gb_memory_mapped_device* device : m_device_list) {
-        delete device;
-    }
+    return true;
 }
 
 void gb_emulator::tracing(bool enable) {
@@ -35,9 +39,9 @@ void gb_emulator::tracing(bool enable) {
 }
 
 bool gb_emulator::go() {
-    while (m_cpu.get_pc() >= 0x0100) {
+    unsigned instruction_count = 0;
+    while (1) {
         m_cycles += m_cpu.step();
+        instruction_count++;
     }
-
-    return true;
 }

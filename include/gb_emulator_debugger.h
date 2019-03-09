@@ -11,7 +11,7 @@ class ncurses_stream;
 
 class gb_emulator_debugger : public gb_emulator {
 public:
-    gb_emulator_debugger(std::string rom_filename);
+    gb_emulator_debugger();
 
     virtual ~gb_emulator_debugger();
 

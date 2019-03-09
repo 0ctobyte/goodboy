@@ -52,11 +52,19 @@ private:
         uint64_t           cycles_lo;
     };
 
+    enum eidiflag_t {
+        EIDI_NONE,
+        EIDI_IENABLE,
+        EIDI_IDISABLE
+    };
+
     registers_t                m_registers;
     std::vector<instruction_t> m_instructions;
     std::vector<instruction_t> m_cb_instructions;
     gb_memory_map&             m_memory_map;
     bool                       m_tracing;
+    eidiflag_t                 m_eidi_flag;
+    bool                       m_interrupt_enable;
 
     // Op execution routines
     uint64_t _op_exec_cb(instruction_t& instruction);

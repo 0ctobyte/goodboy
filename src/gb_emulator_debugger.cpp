@@ -42,8 +42,8 @@ ncurses_stream::~ncurses_stream() {
     m_src.rdbuf(m_srcbuf);
 }
 
-gb_emulator_debugger::gb_emulator_debugger(std::string rom_filename)
-    : gb_emulator(rom_filename),
+gb_emulator_debugger::gb_emulator_debugger()
+    : gb_emulator(),
       m_nwin_pos(0),
       m_nwin_max_lines(10000),
       m_nwin_lines(0),

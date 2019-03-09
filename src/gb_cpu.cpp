@@ -541,7 +541,11 @@
 }
 
 gb_cpu::gb_cpu(gb_memory_map& memory_map)
-    : m_memory_map(memory_map), m_tracing(false) {
+    : m_memory_map(memory_map),
+      m_tracing(false),
+      m_eidi_flag(EIDI_NONE),
+      m_interrupt_enable(true)
+{
     m_instructions = std::vector<instruction_t>(INSTRUCTIONS_LIST_INIT);
     m_cb_instructions = std::vector<instruction_t>(CB_INSTRUCTIONS_LIST_INIT);
 
@@ -583,6 +587,10 @@ uint64_t gb_cpu::step() {
         m_registers.pc++;
         return 0;
     }
+
+    if (m_eidi_flag == EIDI_IENABLE)  m_interrupt_enable = true;
+    if (m_eidi_flag == EIDI_IDISABLE) m_interrupt_enable = false;
+    m_eidi_flag = EIDI_NONE;
 
     return (this->*(instruction.op_exec))(instruction);
 }
@@ -1217,7 +1225,7 @@ uint64_t gb_cpu::_op_exec_res(instruction_t& instruction) {
 uint64_t gb_cpu::_op_exec_di(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    // TODO: Disable interrupts
+    m_eidi_flag = EIDI_IDISABLE;
 
     (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
     return instruction.cycles_hi;
@@ -1226,7 +1234,7 @@ uint64_t gb_cpu::_op_exec_di(instruction_t& instruction) {
 uint64_t gb_cpu::_op_exec_ei(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    // TODO: Enable interrupts
+    m_eidi_flag = EIDI_IENABLE;
 
     (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
     return instruction.cycles_hi;

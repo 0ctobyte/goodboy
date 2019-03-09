@@ -10,11 +10,12 @@
 
 class gb_emulator {
 public:
-    gb_emulator(std::string rom_filename);
+    gb_emulator();
 
     virtual ~gb_emulator();
 
     virtual bool go();
+    virtual bool load_rom(std::string rom_filename);
     virtual void tracing(bool enable);
 
 protected:
