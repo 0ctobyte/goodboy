@@ -16,6 +16,10 @@ uint8_t* gb_memory_mapped_device::get_mem() {
     return m_mem;
 }
 
+gb_address_range_t gb_memory_mapped_device::get_address_range() {
+    return std::make_tuple(m_start_addr, m_size);
+}
+
 bool gb_memory_mapped_device::in_range(uint16_t addr) {
     return ((addr >= m_start_addr) && (addr < (m_start_addr + m_size)));
 }

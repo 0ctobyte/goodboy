@@ -564,7 +564,7 @@ void gb_cpu::dump_registers() {
         m_registers.a, m_registers.f, m_registers.b, m_registers.c, m_registers.d, m_registers.e, m_registers.h, m_registers.l, m_registers.sp, m_registers.pc,
         FLAGS_IS_SET(FLAGS_Z) ? 'Z' : '-', FLAGS_IS_SET(FLAGS_N) ? 'N' : '-', FLAGS_IS_SET(FLAGS_H) ? 'H' : '-', FLAGS_IS_SET(FLAGS_C) ? 'C' : '-');
 
-    GB_LOGGER(GB_LOG_DEBUG) << buf << std::endl;
+    GB_LOGGER(GB_LOG_TRACE) << buf << std::endl;
 }
 
 uint16_t gb_cpu::get_pc() {
@@ -824,7 +824,7 @@ uint64_t gb_cpu::_op_exec_ret(instruction_t& instruction) {
 }
 
 uint64_t gb_cpu::_op_exec_reti(instruction_t& instruction) {
-    // TODO: Enable interrupts
+    m_interrupt_enable = true;
     return gb_cpu::_op_exec_ret(instruction);
 }
 
@@ -1517,7 +1517,7 @@ void gb_cpu::_op_print_type0(std::string disassembly, uint16_t pc, uint16_t oper
     char out[256];
     snprintf(out, 256, "%04x: %s", pc, disassembly.c_str());
     std::string fmt = out;
-    GB_LOGGER(GB_LOG_DEBUG) << fmt << std::endl;
+    GB_LOGGER(GB_LOG_TRACE) << fmt << std::endl;
 }
 
 void gb_cpu::_op_print_type1(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
@@ -1525,7 +1525,7 @@ void gb_cpu::_op_print_type1(std::string disassembly, uint16_t pc, uint16_t oper
     snprintf(buf, 256, disassembly.c_str(), operand1);
     snprintf(out, 256, "%04x: %s", pc, buf);
     std::string fmt = out;
-    GB_LOGGER(GB_LOG_DEBUG) << fmt << std::endl;
+    GB_LOGGER(GB_LOG_TRACE) << fmt << std::endl;
 }
 
 void gb_cpu::_op_print_type2(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {
@@ -1537,7 +1537,7 @@ void gb_cpu::_op_print_type3(std::string disassembly, uint16_t pc, uint16_t oper
     snprintf(buf, 256, disassembly.c_str(), operand2);
     snprintf(out, 256, "%04x: %s", pc, buf);
     std::string fmt = out;
-    GB_LOGGER(GB_LOG_DEBUG) << fmt << std::endl;
+    GB_LOGGER(GB_LOG_TRACE) << fmt << std::endl;
 }
 
 void gb_cpu::_op_print_type4(std::string disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) {

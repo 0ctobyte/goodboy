@@ -3,6 +3,9 @@
 
 #include <cstdint>
 #include <vector>
+#include <tuple>
+
+typedef std::tuple<uint16_t,size_t> gb_address_range_t;
 
 class gb_memory_mapped_device {
 public:
@@ -10,6 +13,7 @@ public:
     virtual ~gb_memory_mapped_device();
 
     virtual uint8_t* get_mem();
+    gb_address_range_t get_address_range();
     virtual bool in_range(uint16_t addr);
     virtual uint16_t translate(uint16_t addr);
     virtual uint8_t read_byte(uint16_t addr);

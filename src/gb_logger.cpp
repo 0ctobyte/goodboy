@@ -18,9 +18,18 @@ void gb_logger::set_stream(std::ostream& o) {
 }
 
 void gb_logger::set_level(gb_logger_level_t log_level) {
-    m_log_level = log_level;
+    // GB_LOG_TRACE is a special separate mode, the highest log level that can be set is GB_LOG_DEBUG
+    m_log_level = log_level == GB_LOG_TRACE ? GB_LOG_DEBUG : log_level;
+}
+
+void gb_logger::enable_tracing(bool enabled) {
+    m_tracing = enabled;
 }
 
 gb_logger_level_t gb_logger::get_level() {
     return m_log_level;
+}
+
+bool gb_logger::is_tracing() {
+    return m_tracing;
 }
