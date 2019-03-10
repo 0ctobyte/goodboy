@@ -571,7 +571,7 @@ uint16_t gb_cpu::get_pc() {
     return m_registers.pc;
 }
 
-uint64_t gb_cpu::step() {
+int gb_cpu::step() {
     uint8_t opcode = m_memory_map.read_byte(m_registers.pc);
 
     instruction_t& instruction = m_instructions[opcode];
@@ -589,7 +589,22 @@ uint64_t gb_cpu::step() {
     return (this->*(instruction.op_exec))(instruction);
 }
 
-uint64_t gb_cpu::_op_exec_cb(instruction_t& instruction) {
+bool gb_cpu::handle_interrupt(gb_interrupt_source* interrupt_source) {
+    if (!m_interrupt_enable) return false;
+
+    // Disable interrupts
+    m_interrupt_enable = false;
+
+    // Push current PC onto the stack
+    _operand_set_mem_sp_16(0, m_registers.pc);
+
+    // Jump to interrupt address
+    m_registers.pc = interrupt_source->get_jump_address();
+
+    return true;
+}
+
+int gb_cpu::_op_exec_cb(instruction_t& instruction) {
     uint8_t cb_opcode = m_memory_map.read_byte(m_registers.pc+1);
 
     instruction_t& cb_instruction = m_cb_instructions[cb_opcode];
@@ -600,14 +615,14 @@ uint64_t gb_cpu::_op_exec_cb(instruction_t& instruction) {
         return 0;
     }
 
-    uint64_t cycles = (this->*(cb_instruction.op_exec))(cb_instruction);
+    int cycles = (this->*(cb_instruction.op_exec))(cb_instruction);
 
     m_registers.pc++;
 
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_nop(instruction_t& instruction) {
+int gb_cpu::_op_exec_nop(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
@@ -615,7 +630,7 @@ uint64_t gb_cpu::_op_exec_nop(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_stop(instruction_t& instruction) {
+int gb_cpu::_op_exec_stop(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     // TODO: Implement stop
@@ -624,7 +639,7 @@ uint64_t gb_cpu::_op_exec_stop(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_halt(instruction_t& instruction) {
+int gb_cpu::_op_exec_halt(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     // TODO: Implement halt
@@ -633,7 +648,7 @@ uint64_t gb_cpu::_op_exec_halt(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_ld(instruction_t& instruction) {
+int gb_cpu::_op_exec_ld(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t data = (this->*(instruction.get_operand1))();
@@ -645,7 +660,7 @@ uint64_t gb_cpu::_op_exec_ld(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_add8(instruction_t& instruction) {
+int gb_cpu::_op_exec_add8(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a1 = (this->*(instruction.get_operand1))();
@@ -663,7 +678,7 @@ uint64_t gb_cpu::_op_exec_add8(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_add16(instruction_t& instruction) {
+int gb_cpu::_op_exec_add16(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint32_t a1 = (this->*(instruction.get_operand1))();
@@ -680,7 +695,7 @@ uint64_t gb_cpu::_op_exec_add16(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_addsp(instruction_t& instruction) {
+int gb_cpu::_op_exec_addsp(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     int32_t a1 = static_cast<int32_t>(static_cast<int8_t>((this->*(instruction.get_operand1))()));
@@ -697,7 +712,7 @@ uint64_t gb_cpu::_op_exec_addsp(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_adc(instruction_t& instruction) {
+int gb_cpu::_op_exec_adc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint8_t carry = FLAGS_IS_SET(FLAGS_C) ? 1 : 0;
@@ -716,7 +731,7 @@ uint64_t gb_cpu::_op_exec_adc(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_sub(instruction_t& instruction) {
+int gb_cpu::_op_exec_sub(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a1 = (this->*(instruction.get_operand1))();
@@ -737,7 +752,7 @@ uint64_t gb_cpu::_op_exec_sub(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_sbc(instruction_t& instruction) {
+int gb_cpu::_op_exec_sbc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t carry = FLAGS_IS_SET(FLAGS_C) ? 1 : 0;
@@ -757,10 +772,10 @@ uint64_t gb_cpu::_op_exec_sbc(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_jr(instruction_t& instruction) {
+int gb_cpu::_op_exec_jr(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint64_t cycles = instruction.cycles_lo;
+    int cycles = instruction.cycles_lo;
     int16_t offset = static_cast<int8_t>((this->*(instruction.get_operand1))());
     uint16_t jump_pc = static_cast<uint16_t>(static_cast<int16_t>(m_registers.pc) + offset);
     uint16_t do_jump = instruction.get_operand2 == nullptr ? 1 : (this->*(instruction.get_operand2))();
@@ -774,10 +789,10 @@ uint64_t gb_cpu::_op_exec_jr(instruction_t& instruction) {
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_jp(instruction_t& instruction) {
+int gb_cpu::_op_exec_jp(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint64_t cycles = instruction.cycles_lo;
+    int cycles = instruction.cycles_lo;
     uint16_t jump_pc = (this->*(instruction.get_operand1))();
     uint16_t do_jump = instruction.get_operand2 == nullptr ? 1 : (this->*(instruction.get_operand2))();
 
@@ -790,10 +805,10 @@ uint64_t gb_cpu::_op_exec_jp(instruction_t& instruction) {
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_call(instruction_t& instruction) {
+int gb_cpu::_op_exec_call(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint64_t cycles = instruction.cycles_lo;
+    int cycles = instruction.cycles_lo;
     uint16_t jump_pc = (this->*(instruction.get_operand1))();
     uint16_t do_jump = instruction.get_operand2 == nullptr ? 1 : (this->*(instruction.get_operand2))();
 
@@ -807,10 +822,10 @@ uint64_t gb_cpu::_op_exec_call(instruction_t& instruction) {
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_ret(instruction_t& instruction) {
+int gb_cpu::_op_exec_ret(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    uint64_t cycles = instruction.cycles_lo;
+    int cycles = instruction.cycles_lo;
     uint16_t do_jump = instruction.get_operand2 == nullptr ? 1 : (this->*(instruction.get_operand2))();
 
     if (do_jump != 0) {
@@ -823,12 +838,12 @@ uint64_t gb_cpu::_op_exec_ret(instruction_t& instruction) {
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_reti(instruction_t& instruction) {
+int gb_cpu::_op_exec_reti(instruction_t& instruction) {
     m_interrupt_enable = true;
     return gb_cpu::_op_exec_ret(instruction);
 }
 
-uint64_t gb_cpu::_op_exec_rst(instruction_t& instruction) {
+int gb_cpu::_op_exec_rst(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t jump_pc = (this->*(instruction.get_operand1))();
@@ -840,7 +855,7 @@ uint64_t gb_cpu::_op_exec_rst(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_da(instruction_t& instruction) {
+int gb_cpu::_op_exec_da(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a = (this->*(instruction.get_operand1))();
@@ -870,7 +885,7 @@ uint64_t gb_cpu::_op_exec_da(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rlc(instruction_t& instruction) {
+int gb_cpu::_op_exec_rlc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = static_cast<uint16_t>((this->*(instruction.get_operand1))() << 1);
@@ -887,13 +902,13 @@ uint64_t gb_cpu::_op_exec_rlc(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rlca(instruction_t& instruction) {
-    uint64_t cycles = _op_exec_rlc(instruction);
+int gb_cpu::_op_exec_rlca(instruction_t& instruction) {
+    int cycles = _op_exec_rlc(instruction);
     FLAGS_CLEAR(FLAGS_Z);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_rl(instruction_t& instruction) {
+int gb_cpu::_op_exec_rl(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = static_cast<uint16_t>((this->*(instruction.get_operand1))() << 1);
@@ -911,13 +926,13 @@ uint64_t gb_cpu::_op_exec_rl(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rla(instruction_t& instruction) {
-    uint64_t cycles = _op_exec_rl(instruction);
+int gb_cpu::_op_exec_rla(instruction_t& instruction) {
+    int cycles = _op_exec_rl(instruction);
     FLAGS_CLEAR(FLAGS_Z);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_rrc(instruction_t& instruction) {
+int gb_cpu::_op_exec_rrc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -935,13 +950,13 @@ uint64_t gb_cpu::_op_exec_rrc(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rrca(instruction_t& instruction) {
-    uint64_t cycles = _op_exec_rrc(instruction);
+int gb_cpu::_op_exec_rrca(instruction_t& instruction) {
+    int cycles = _op_exec_rrc(instruction);
     FLAGS_CLEAR(FLAGS_Z);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_rr(instruction_t& instruction) {
+int gb_cpu::_op_exec_rr(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -960,13 +975,13 @@ uint64_t gb_cpu::_op_exec_rr(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_rra(instruction_t& instruction) {
-    uint64_t cycles = _op_exec_rr(instruction);
+int gb_cpu::_op_exec_rra(instruction_t& instruction) {
+    int cycles = _op_exec_rr(instruction);
     FLAGS_CLEAR(FLAGS_Z);
     return cycles;
 }
 
-uint64_t gb_cpu::_op_exec_sla(instruction_t& instruction) {
+int gb_cpu::_op_exec_sla(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = static_cast<uint16_t>((this->*(instruction.get_operand1))() << 1);
@@ -982,7 +997,7 @@ uint64_t gb_cpu::_op_exec_sla(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_sra(instruction_t& instruction) {
+int gb_cpu::_op_exec_sra(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -1001,7 +1016,7 @@ uint64_t gb_cpu::_op_exec_sra(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_srl(instruction_t& instruction) {
+int gb_cpu::_op_exec_srl(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -1019,7 +1034,7 @@ uint64_t gb_cpu::_op_exec_srl(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_swap(instruction_t& instruction) {
+int gb_cpu::_op_exec_swap(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -1036,7 +1051,7 @@ uint64_t gb_cpu::_op_exec_swap(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_cpl(instruction_t& instruction) {
+int gb_cpu::_op_exec_cpl(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -1049,7 +1064,7 @@ uint64_t gb_cpu::_op_exec_cpl(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_inc(instruction_t& instruction) {
+int gb_cpu::_op_exec_inc(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -1060,7 +1075,7 @@ uint64_t gb_cpu::_op_exec_inc(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_dec(instruction_t& instruction) {
+int gb_cpu::_op_exec_dec(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -1071,7 +1086,7 @@ uint64_t gb_cpu::_op_exec_dec(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_incf(instruction_t& instruction) {
+int gb_cpu::_op_exec_incf(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -1088,7 +1103,7 @@ uint64_t gb_cpu::_op_exec_incf(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_decf(instruction_t& instruction) {
+int gb_cpu::_op_exec_decf(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t val = (this->*(instruction.get_operand1))();
@@ -1106,7 +1121,7 @@ uint64_t gb_cpu::_op_exec_decf(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_scf(instruction_t& instruction) {
+int gb_cpu::_op_exec_scf(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     FLAGS_CLEAR(FLAGS_N | FLAGS_H);
@@ -1116,7 +1131,7 @@ uint64_t gb_cpu::_op_exec_scf(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_ccf(instruction_t& instruction) {
+int gb_cpu::_op_exec_ccf(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     FLAGS_CLEAR(FLAGS_N | FLAGS_H);
@@ -1126,7 +1141,7 @@ uint64_t gb_cpu::_op_exec_ccf(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_and(instruction_t& instruction) {
+int gb_cpu::_op_exec_and(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a1 = (this->*(instruction.get_operand1))();
@@ -1143,7 +1158,7 @@ uint64_t gb_cpu::_op_exec_and(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_xor(instruction_t& instruction) {
+int gb_cpu::_op_exec_xor(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a1 = (this->*(instruction.get_operand1))();
@@ -1159,7 +1174,7 @@ uint64_t gb_cpu::_op_exec_xor(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_or(instruction_t& instruction) {
+int gb_cpu::_op_exec_or(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a1 = (this->*(instruction.get_operand1))();
@@ -1175,7 +1190,7 @@ uint64_t gb_cpu::_op_exec_or(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_bit(instruction_t& instruction) {
+int gb_cpu::_op_exec_bit(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a1 = (this->*(instruction.get_operand1))();
@@ -1190,7 +1205,7 @@ uint64_t gb_cpu::_op_exec_bit(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_set(instruction_t& instruction) {
+int gb_cpu::_op_exec_set(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a1 = (this->*(instruction.get_operand1))();
@@ -1203,7 +1218,7 @@ uint64_t gb_cpu::_op_exec_set(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_res(instruction_t& instruction) {
+int gb_cpu::_op_exec_res(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     uint16_t a1 = (this->*(instruction.get_operand1))();
@@ -1216,7 +1231,7 @@ uint64_t gb_cpu::_op_exec_res(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_di(instruction_t& instruction) {
+int gb_cpu::_op_exec_di(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     m_eidi_flag = EIDI_IDISABLE;
@@ -1225,7 +1240,7 @@ uint64_t gb_cpu::_op_exec_di(instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
-uint64_t gb_cpu::_op_exec_ei(instruction_t& instruction) {
+int gb_cpu::_op_exec_ei(instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
     m_eidi_flag = EIDI_IENABLE;

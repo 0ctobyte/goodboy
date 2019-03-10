@@ -22,6 +22,12 @@ public:
 private:
     typedef std::vector<gb_memory_mapped_device*> gb_device_map_t;
 
+    // Memory is split into LOMEM (0000 - E000) and HIMEM (FE00 - 10000)
+    // This way we can split up the granularity of region sizes for each hash table
+    // LOMEM hash tables have a granularity of 2KB (i.e. each device must map a minimum of 2KB regions).
+    // HIMEM hash tables have a granularity of 1 byte (for IO registers etc.)
+    // The idea is that each device maps directly and completely (i.e no holes) into one or more entries in one or both tables
+    // Also, we split tables by readable and writeable devices (i.e. ROM vs RAM or RO registers)
     gb_device_map_t m_lomem_readable_devices;
     gb_device_map_t m_lomem_writeable_devices;
     gb_device_map_t m_himem_readable_devices;

@@ -47,7 +47,8 @@ gb_emulator_debugger::gb_emulator_debugger()
       m_nwin_pos(0),
       m_nwin_max_lines(10000),
       m_nwin_lines(0),
-      m_nwin_cols(0) {
+      m_nwin_cols(0)
+{
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
     initscr();
@@ -73,7 +74,7 @@ gb_emulator_debugger::~gb_emulator_debugger() {
     endwin();
 }
 
-bool gb_emulator_debugger::go() {
+void gb_emulator_debugger::go() {
     for(int c = wgetch(m_nwin); c != 'q'; c = wgetch(m_nwin)) {
         if (m_continue) {
             _debugger_step_once();
@@ -86,12 +87,12 @@ bool gb_emulator_debugger::go() {
 
         prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines-1, m_nwin_cols);
     }
-
-    return true;
 }
 
 void gb_emulator_debugger::_debugger_step_once() {
-    m_cycles += m_cpu.step();
+    int cycles = m_cpu.step();
+    m_cycles += static_cast<uint64_t>(cycles);
+    m_interrupt_controller.update(cycles);
     m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
 }
 

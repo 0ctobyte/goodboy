@@ -15,7 +15,7 @@ public:
 
     virtual ~gb_emulator_debugger();
 
-    virtual bool go();
+    virtual void go();
 
 private:
     typedef void (gb_emulator_debugger::*key_handler_t)();

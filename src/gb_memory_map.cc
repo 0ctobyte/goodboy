@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <stdexcept>
 
 #include "gb_logger.h"
 #include "gb_memory_map.h"
@@ -25,6 +26,8 @@ gb_memory_map::~gb_memory_map() {
 }
 
 void gb_memory_map::_add_device_to_map(gb_device_map_t& device_map, gb_memory_mapped_device* device, uint16_t start_addr, size_t end_addr, size_t bucket_size) {
+    if (device == nullptr) throw std::invalid_argument("gb_memory_map::_add_device_to_map - got nullptr");
+
     for (uint64_t i = start_addr; i < end_addr; i += bucket_size) {
         uint16_t idx = static_cast<uint16_t>(i) / bucket_size;
         device_map.at(idx) = device;
@@ -33,6 +36,8 @@ void gb_memory_map::_add_device_to_map(gb_device_map_t& device_map, gb_memory_ma
 
 void gb_memory_map::add_readable_device(gb_memory_mapped_device* device, uint16_t start_addr, size_t size) {
     size_t end_addr = start_addr + size;
+
+    // Add device to either the LOMEM or HIMEM lists or both depending on the address range
     if (start_addr < GB_MEMORY_MAP_EORAM_START) {
         _add_device_to_map(m_lomem_readable_devices, device, start_addr, std::min<size_t>(end_addr, GB_MEMORY_MAP_EORAM_START-1), GB_MEMORY_MAP_LOMEM_BUCKET_SIZE);
         // Add device to both LOMEM and HIMEM if the span crosses both regions
@@ -46,6 +51,8 @@ void gb_memory_map::add_readable_device(gb_memory_mapped_device* device, uint16_
 
 void gb_memory_map::add_writeable_device(gb_memory_mapped_device* device, uint16_t start_addr, size_t size) {
     size_t end_addr = start_addr + size;
+
+    // Add device to either the LOMEM or HIMEM lists or both depending on the address range
     if (start_addr < GB_MEMORY_MAP_EORAM_START) {
         _add_device_to_map(m_lomem_writeable_devices, device, start_addr, std::min<size_t>(end_addr, GB_MEMORY_MAP_EORAM_START-1), GB_MEMORY_MAP_LOMEM_BUCKET_SIZE);
         // Add device to both LOMEM and HIMEM if the span crosses both regions
@@ -61,6 +68,7 @@ uint8_t gb_memory_map::read_byte(uint16_t addr) {
     uint16_t naddr = addr;
     gb_memory_mapped_device* device = nullptr;
 
+    // Determine if address is either in LOMEM, in the Echo RAM space, or in HIMEM
     if (addr < GB_MEMORY_MAP_LOMEM_SIZE) {
         device = m_lomem_readable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE);
     } else if (addr < GB_MEMORY_MAP_HIMEM_START) {
@@ -85,6 +93,7 @@ void gb_memory_map::write_byte(uint16_t addr, uint8_t data) {
     uint16_t naddr = addr;
     gb_memory_mapped_device* device = nullptr;
 
+    // Determine if address is either in LOMEM, in the Echo RAM space, or in HIMEM
     if (addr < GB_MEMORY_MAP_LOMEM_SIZE) {
         device = m_lomem_writeable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE);
     } else if (addr < GB_MEMORY_MAP_HIMEM_START) {
@@ -95,6 +104,7 @@ void gb_memory_map::write_byte(uint16_t addr, uint8_t data) {
         device = m_himem_writeable_devices.at((naddr - GB_MEMORY_MAP_HIMEM_START) / GB_MEMORY_MAP_HIMEM_BUCKET_SIZE);
     }
 
+    // Ensure we actually have a device that can handle this write request
     if (device == nullptr) {
         GB_LOGGER(GB_LOG_WARN) << "write_byte: Address not implemented: " << std::hex << addr << std::endl;
     } else {
