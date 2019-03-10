@@ -20,13 +20,13 @@ private:
     class gb_interrupt_flags : public gb_memory_mapped_device {
     public:
         gb_interrupt_flags();
-        virtual ~gb_interrupt_flags();
+        virtual ~gb_interrupt_flags() override;
     };
 
     class gb_interrupt_enable : public gb_memory_mapped_device {
     public:
         gb_interrupt_enable();
-        virtual ~gb_interrupt_enable();
+        virtual ~gb_interrupt_enable() override;
     };
 
     typedef std::shared_ptr<gb_interrupt_flags>  gb_interrupt_flags_ptr;

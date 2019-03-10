@@ -10,10 +10,10 @@
 class gb_serial_io : public gb_memory_mapped_device, public gb_interrupt_source {
 public:
     gb_serial_io();
-    virtual ~gb_serial_io();
+    virtual ~gb_serial_io() override;
 
-    virtual void write_byte(uint16_t addr, uint8_t val);
-    virtual bool update(int cycles);
+    virtual void write_byte(uint16_t addr, uint8_t val) override;
+    virtual bool update(int cycles) override;
 
 private:
     std::string m_str;

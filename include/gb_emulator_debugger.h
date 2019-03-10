@@ -12,9 +12,9 @@ class ncurses_stream;
 class gb_emulator_debugger : public gb_emulator {
 public:
     gb_emulator_debugger();
-    virtual ~gb_emulator_debugger();
+    virtual ~gb_emulator_debugger() override;
 
-    virtual void go();
+    virtual void go() override;
 
 private:
     typedef void (gb_emulator_debugger::*key_handler_t)();

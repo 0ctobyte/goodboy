@@ -9,9 +9,9 @@
 class gb_rom : public gb_memory_mapped_device {
 public:
     gb_rom(uint16_t start_addr, size_t size);
-    virtual ~gb_rom();
+    virtual ~gb_rom() override;
 
-    virtual void write_byte(uint16_t addr, uint8_t val);
+    virtual void write_byte(uint16_t addr, uint8_t val) override;
 };
 
 typedef std::shared_ptr<gb_rom> gb_rom_ptr;
