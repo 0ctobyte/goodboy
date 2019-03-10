@@ -7,12 +7,12 @@
 
 class ncurses_buf : public std::streambuf {
 public:
-    WINDOW *m_win;
+    WINDOW* m_win;
 
     ncurses_buf() {}
     ~ncurses_buf() {}
 
-    void setWindow(WINDOW *new_win) {
+    void setWindow(WINDOW* new_win) {
         m_win = new_win;
     }
     virtual int overflow(int c);
@@ -27,9 +27,9 @@ class ncurses_stream : public std::ostream {
 public:
     ncurses_buf m_tbuf;
     std::ostream &m_src;
-    std::streambuf * const m_srcbuf;
+    std::streambuf* const m_srcbuf;
 
-    ncurses_stream(std::ostream &o, WINDOW *win)
+    ncurses_stream(std::ostream &o, WINDOW* win)
         : std::ostream(&m_tbuf), m_src(o), m_srcbuf(o.rdbuf()) {
         o.rdbuf(rdbuf());
         m_tbuf.setWindow(win);

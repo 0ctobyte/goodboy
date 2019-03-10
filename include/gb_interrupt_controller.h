@@ -13,7 +13,7 @@ public:
     gb_interrupt_controller(gb_memory_map& memory_map, gb_cpu& cpu);
     ~gb_interrupt_controller();
 
-    void add_interrupt_source(gb_interrupt_source* interrupt_source);
+    void add_interrupt_source(gb_interrupt_source_ptr interrupt_source);
     void update(int cycles);
 
 private:
@@ -29,16 +29,19 @@ private:
         virtual ~gb_interrupt_enable();
     };
 
+    typedef std::shared_ptr<gb_interrupt_flags>  gb_interrupt_flags_ptr;
+    typedef std::shared_ptr<gb_interrupt_enable> gb_interrupt_enable_ptr;
+
     // The gb_interrupt_flags and gb_interrupt_enable objects contain the memory mapped
     // flags and enable registers
-    gb_interrupt_flags                 m_iflags;
-    gb_interrupt_enable                m_ienable;
+    gb_interrupt_flags_ptr               m_iflags;
+    gb_interrupt_enable_ptr              m_ienable;
 
     // The interrupt controller needs access to the CPU to send it interrupt sources to handle
-    gb_cpu&                            m_cpu;
+    gb_cpu&                              m_cpu;
 
     // List of interrupt sources to update every iteration
-    std::vector<gb_interrupt_source*> m_interrupt_sources;
+    std::vector<gb_interrupt_source_ptr> m_interrupt_sources;
 };
 
 #endif // GB_INTERRUPT_CONTROLLER_H_

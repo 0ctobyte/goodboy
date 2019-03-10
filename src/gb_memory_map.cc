@@ -25,7 +25,7 @@ gb_memory_map::gb_memory_map()
 gb_memory_map::~gb_memory_map() {
 }
 
-void gb_memory_map::_add_device_to_map(gb_device_map_t& device_map, gb_memory_mapped_device* device, uint16_t start_addr, size_t end_addr, size_t bucket_size) {
+void gb_memory_map::_add_device_to_map(gb_device_map_t& device_map, gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t end_addr, size_t bucket_size) {
     if (device == nullptr) throw std::invalid_argument("gb_memory_map::_add_device_to_map - got nullptr");
 
     for (uint64_t i = start_addr; i < end_addr; i += bucket_size) {
@@ -34,7 +34,7 @@ void gb_memory_map::_add_device_to_map(gb_device_map_t& device_map, gb_memory_ma
     }
 }
 
-void gb_memory_map::add_readable_device(gb_memory_mapped_device* device, uint16_t start_addr, size_t size) {
+void gb_memory_map::add_readable_device(gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size) {
     size_t end_addr = start_addr + size;
 
     // Add device to either the LOMEM or HIMEM lists or both depending on the address range
@@ -49,7 +49,7 @@ void gb_memory_map::add_readable_device(gb_memory_mapped_device* device, uint16_
     }
 }
 
-void gb_memory_map::add_writeable_device(gb_memory_mapped_device* device, uint16_t start_addr, size_t size) {
+void gb_memory_map::add_writeable_device(gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size) {
     size_t end_addr = start_addr + size;
 
     // Add device to either the LOMEM or HIMEM lists or both depending on the address range
@@ -70,13 +70,13 @@ uint8_t gb_memory_map::read_byte(uint16_t addr) {
 
     // Determine if address is either in LOMEM, in the Echo RAM space, or in HIMEM
     if (addr < GB_MEMORY_MAP_LOMEM_SIZE) {
-        device = m_lomem_readable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE);
+        device = m_lomem_readable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE).get();
     } else if (addr < GB_MEMORY_MAP_HIMEM_START) {
         // Echo RAM
         naddr = (addr - GB_MEMORY_MAP_EORAM_START) + GB_MEMORY_MAP_WKRAM_START;
-        device = m_lomem_readable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE);
+        device = m_lomem_readable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE).get();
     } else {
-        device = m_himem_readable_devices.at((naddr - GB_MEMORY_MAP_HIMEM_START) / GB_MEMORY_MAP_HIMEM_BUCKET_SIZE);
+        device = m_himem_readable_devices.at((naddr - GB_MEMORY_MAP_HIMEM_START) / GB_MEMORY_MAP_HIMEM_BUCKET_SIZE).get();
     }
 
     if (device == nullptr) {
@@ -95,13 +95,13 @@ void gb_memory_map::write_byte(uint16_t addr, uint8_t data) {
 
     // Determine if address is either in LOMEM, in the Echo RAM space, or in HIMEM
     if (addr < GB_MEMORY_MAP_LOMEM_SIZE) {
-        device = m_lomem_writeable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE);
+        device = m_lomem_writeable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE).get();
     } else if (addr < GB_MEMORY_MAP_HIMEM_START) {
         // Echo RAM
         naddr = (addr - GB_MEMORY_MAP_EORAM_START) + GB_MEMORY_MAP_WKRAM_START;
-        device = m_lomem_writeable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE);
+        device = m_lomem_writeable_devices.at(naddr / GB_MEMORY_MAP_LOMEM_BUCKET_SIZE).get();
     } else {
-        device = m_himem_writeable_devices.at((naddr - GB_MEMORY_MAP_HIMEM_START) / GB_MEMORY_MAP_HIMEM_BUCKET_SIZE);
+        device = m_himem_writeable_devices.at((naddr - GB_MEMORY_MAP_HIMEM_START) / GB_MEMORY_MAP_HIMEM_BUCKET_SIZE).get();
     }
 
     // Ensure we actually have a device that can handle this write request

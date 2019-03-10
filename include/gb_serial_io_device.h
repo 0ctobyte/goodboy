@@ -20,4 +20,6 @@ private:
     int         m_irq_counter;
 };
 
+typedef std::shared_ptr<gb_serial_io_device> gb_serial_io_device_ptr;
+
 #endif // GB_SERIAL_IO_DEVICE_H_

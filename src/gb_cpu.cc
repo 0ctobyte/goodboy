@@ -589,7 +589,7 @@ int gb_cpu::step() {
     return (this->*(instruction.op_exec))(instruction);
 }
 
-bool gb_cpu::handle_interrupt(gb_interrupt_source* interrupt_source) {
+bool gb_cpu::handle_interrupt(uint16_t jump_address) {
     if (!m_interrupt_enable) return false;
 
     // Disable interrupts
@@ -599,7 +599,7 @@ bool gb_cpu::handle_interrupt(gb_interrupt_source* interrupt_source) {
     _operand_set_mem_sp_16(0, m_registers.pc);
 
     // Jump to interrupt address
-    m_registers.pc = interrupt_source->get_jump_address();
+    m_registers.pc = jump_address;
 
     return true;
 }

@@ -24,7 +24,6 @@ protected:
     gb_memory_map            m_memory_map;
     gb_cpu                   m_cpu;
     gb_interrupt_controller  m_interrupt_controller;
-    gb_device_list           m_device_list;
     uint64_t                 m_cycles;
 };
 

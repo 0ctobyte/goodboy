@@ -26,42 +26,37 @@ bool gb_emulator::load_rom(std::string rom_filename) {
     rom_file.seekg(0, rom_file.beg);
 
     // First 32KB of ROM
-    gb_rom* rom = new gb_rom(0x0000, 0x8000);
+    gb_rom_ptr rom = std::make_shared<gb_rom>(0x0000, 0x8000);
 
     rom_file.read(reinterpret_cast<char*>(rom->get_mem()), binsize);
 
     rom_file.close();
 
     // Add ROM as readable device but not writeable...of course
-    m_device_list.push_back(rom);
     gb_address_range_t addr_range = rom->get_address_range();
     m_memory_map.add_readable_device(rom, std::get<0>(addr_range), std::get<1>(addr_range));
 
     // Add 8KB of external RAM (on the cartridge)
-    gb_ram* ext_ram = new gb_ram(0xA000, 0x2000);
-    m_device_list.push_back(ext_ram);
+    gb_ram_ptr ext_ram = std::make_shared<gb_ram>(0xA000, 0x2000);
     addr_range = ext_ram->get_address_range();
     m_memory_map.add_readable_device(ext_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(ext_ram, std::get<0>(addr_range), std::get<1>(addr_range));
 
     // Another 8KB of work RAM (on the gameboy)
-    gb_ram* work_ram = new gb_ram(0xC000, 0x2000);
-    m_device_list.push_back(work_ram);
+    gb_ram_ptr work_ram = std::make_shared<gb_ram>(0xC000, 0x2000);
     addr_range = work_ram->get_address_range();
     m_memory_map.add_readable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
 
     // Add Serial IO device for printing to terminal
-    gb_serial_io_device* sio = new gb_serial_io_device();
-    m_device_list.push_back(sio);
+    gb_serial_io_device_ptr sio = std::make_shared<gb_serial_io_device>();
     addr_range = sio->get_address_range();
     m_memory_map.add_readable_device(sio, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(sio, std::get<0>(addr_range), std::get<1>(addr_range));
     m_interrupt_controller.add_interrupt_source(sio);
 
     // Add 128 bytes of high RAM (used for stack and temp variables)
-    gb_ram* high_ram = new gb_ram(0xFF80, 0x80);
-    m_device_list.push_back(static_cast<gb_memory_mapped_device*>(high_ram));
+    gb_ram_ptr high_ram = std::make_shared<gb_ram>(0xFF80, 0x80);
     addr_range = high_ram->get_address_range();
     m_memory_map.add_readable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));

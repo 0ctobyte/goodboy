@@ -14,4 +14,6 @@ public:
     virtual void write_byte(uint16_t addr, uint8_t val);
 };
 
+typedef std::shared_ptr<gb_rom> gb_rom_ptr;
+
 #endif // GB_ROM_

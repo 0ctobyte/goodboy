@@ -12,4 +12,6 @@ public:
     virtual ~gb_ram();
 };
 
+typedef std::shared_ptr<gb_ram> gb_ram_ptr;
+
 #endif // GB_RAM_

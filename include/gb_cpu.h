@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "gb_memory_map.h"
-#include "gb_interrupt_source.h"
 
 class gb_cpu {
 public:
@@ -16,7 +15,7 @@ public:
     void dump_registers();
     uint16_t get_pc();
     int step();
-    bool handle_interrupt(gb_interrupt_source* interrupt_source);
+    bool handle_interrupt(uint16_t jump_address);
 
 private:
     struct registers_t {

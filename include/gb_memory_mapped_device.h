@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include <tuple>
+#include <memory>
 
 typedef std::tuple<uint16_t,size_t> gb_address_range_t;
 
@@ -24,5 +25,7 @@ protected:
     size_t               m_size;
     uint8_t*             m_mem;
 };
+
+typedef std::shared_ptr<gb_memory_mapped_device> gb_memory_mapped_device_ptr;
 
 #endif // GB_MEMORY_MAPPED_DEVICE_
