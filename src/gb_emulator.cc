@@ -3,7 +3,7 @@
 #include "gb_emulator.h"
 #include "gb_rom.h"
 #include "gb_ram.h"
-#include "gb_serial_io_device.h"
+#include "gb_serial_io.h"
 
 gb_emulator::gb_emulator()
     : m_memory_map(),
@@ -16,7 +16,7 @@ gb_emulator::gb_emulator()
 gb_emulator::~gb_emulator() {
 }
 
-bool gb_emulator::load_rom(std::string rom_filename) {
+bool gb_emulator::load_rom(const std::string& rom_filename) {
     std::ifstream rom_file (rom_filename, std::ifstream::binary);
 
     if (!rom_file) return false;
@@ -49,7 +49,7 @@ bool gb_emulator::load_rom(std::string rom_filename) {
     m_memory_map.add_writeable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
 
     // Add Serial IO device for printing to terminal
-    gb_serial_io_device_ptr sio = std::make_shared<gb_serial_io_device>();
+    gb_serial_io_ptr sio = std::make_shared<gb_serial_io>();
     addr_range = sio->get_address_range();
     m_memory_map.add_readable_device(sio, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(sio, std::get<0>(addr_range), std::get<1>(addr_range));

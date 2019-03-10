@@ -27,8 +27,8 @@ public:
     void set_stream(std::ostream& o);
     void set_level(gb_logger_level_t log_level);
     void enable_tracing(bool enabled);
-    gb_logger_level_t get_level();
-    bool is_tracing();
+    gb_logger_level_t get_level() const;
+    bool is_tracing() const;
 
 protected:
     gb_logger();

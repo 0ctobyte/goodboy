@@ -12,13 +12,13 @@ class ncurses_stream;
 class gb_emulator_debugger : public gb_emulator {
 public:
     gb_emulator_debugger();
-
     virtual ~gb_emulator_debugger();
 
     virtual void go();
 
 private:
     typedef void (gb_emulator_debugger::*key_handler_t)();
+    typedef std::unordered_map<int, key_handler_t> key_map_t;
 
     ncurses_stream*              m_nstream;
     WINDOW*                      m_nwin;
@@ -27,7 +27,7 @@ private:
     int                          m_nwin_lines;
     int                          m_nwin_cols;
     bool                         m_continue;
-    std::unordered_map<int, key_handler_t> m_key_map = {
+    key_map_t                    m_key_map = {
         {'n', &gb_emulator_debugger::_debugger_step_once},
         {'r', &gb_emulator_debugger::_debugger_dump_registers},
         {'u', &gb_emulator_debugger::_debugger_scroll_up_half_pg},

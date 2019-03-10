@@ -26,10 +26,10 @@ void gb_logger::enable_tracing(bool enabled) {
     m_tracing = enabled;
 }
 
-gb_logger_level_t gb_logger::get_level() {
+gb_logger_level_t gb_logger::get_level() const {
     return m_log_level;
 }
 
-bool gb_logger::is_tracing() {
+bool gb_logger::is_tracing() const {
     return m_tracing;
 }

@@ -20,6 +20,7 @@ public:
 
 private:
     typedef bool (gb_emulator_opts::*opt_handler_t)();
+    typedef std::unordered_map<int, opt_handler_t> opt_map_t;
 
     int                            m_argc;
     char**                         m_argv;
@@ -30,7 +31,7 @@ private:
         "-t          : Enable tracing",
         "rom_file    : Gameboy program to run on the emulator"
     };
-    std::unordered_map<int, opt_handler_t>   m_opt_map = {
+    opt_map_t                      m_opt_map = {
         {'h', &gb_emulator_opts::_opt_print_doc},
         {'d', &gb_emulator_opts::_opt_set_debugger_flag},
         {'t', &gb_emulator_opts::_opt_set_tracing_flag}

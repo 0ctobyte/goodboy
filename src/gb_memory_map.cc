@@ -25,7 +25,7 @@ gb_memory_map::gb_memory_map()
 gb_memory_map::~gb_memory_map() {
 }
 
-void gb_memory_map::_add_device_to_map(gb_device_map_t& device_map, gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t end_addr, size_t bucket_size) {
+void gb_memory_map::_add_device_to_map(gb_device_map_t& device_map, const gb_memory_mapped_device_ptr& device, uint16_t start_addr, size_t end_addr, size_t bucket_size) {
     if (device == nullptr) throw std::invalid_argument("gb_memory_map::_add_device_to_map - got nullptr");
 
     for (uint64_t i = start_addr; i < end_addr; i += bucket_size) {
@@ -34,7 +34,7 @@ void gb_memory_map::_add_device_to_map(gb_device_map_t& device_map, gb_memory_ma
     }
 }
 
-void gb_memory_map::add_readable_device(gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size) {
+void gb_memory_map::add_readable_device(const gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size) {
     size_t end_addr = start_addr + size;
 
     // Add device to either the LOMEM or HIMEM lists or both depending on the address range
@@ -49,7 +49,7 @@ void gb_memory_map::add_readable_device(gb_memory_mapped_device_ptr device, uint
     }
 }
 
-void gb_memory_map::add_writeable_device(gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size) {
+void gb_memory_map::add_writeable_device(const gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size) {
     size_t end_addr = start_addr + size;
 
     // Add device to either the LOMEM or HIMEM lists or both depending on the address range

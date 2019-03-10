@@ -38,7 +38,7 @@ gb_interrupt_controller::gb_interrupt_controller(gb_memory_map& memory_map, gb_c
 gb_interrupt_controller::~gb_interrupt_controller() {
 }
 
-void gb_interrupt_controller::add_interrupt_source(gb_interrupt_source_ptr interrupt_source) {
+void gb_interrupt_controller::add_interrupt_source(const gb_interrupt_source_ptr& interrupt_source) {
     if (interrupt_source == nullptr) throw std::invalid_argument("gb_interrupt_controller::add_interrupt_source - got nullptr");
 
     // Add interrupt source and then sort the sources by priority (i.e. flag bit) so highest priority source is last

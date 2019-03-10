@@ -1,7 +1,7 @@
 #include <algorithm>
 
 #include "gb_logger.h"
-#include "gb_serial_io_device.h"
+#include "gb_serial_io.h"
 
 #define GB_SERIAL_IO_SB_ADDR              (0xFF01)
 #define GB_SERIAL_IO_SC_ADDR              (0xFF02)
@@ -12,17 +12,17 @@
 #define GB_SERIAL_IO_INTERNAL_CLOCK_FREQ  (8192)
 #define GB_SERIAL_IO_CYCLES_TO_IRQ        ((CLOCK_SPEED)/((GB_SERIAL_IO_INTERNAL_CLOCK_FREQ)/8))
 
-gb_serial_io_device::gb_serial_io_device()
+gb_serial_io::gb_serial_io()
     : gb_memory_mapped_device(GB_SERIAL_IO_SB_ADDR, 2),
       gb_interrupt_source(GB_SERIAL_IO_JUMP_ADDR, GB_SERIAL_IO_FLAG_BIT),
       m_irq_counter(0)
 {
 }
 
-gb_serial_io_device::~gb_serial_io_device() {
+gb_serial_io::~gb_serial_io() {
 }
 
-bool gb_serial_io_device::update(int cycles) {
+bool gb_serial_io::update(int cycles) {
     if (m_irq_counter == 0) return false;
 
     // This should model the actual system where transfers take 8*8192 Hz (internal clock) before
@@ -48,7 +48,7 @@ bool gb_serial_io_device::update(int cycles) {
     return false;
 }
 
-void gb_serial_io_device::write_byte(uint16_t addr, uint8_t val) {
+void gb_serial_io::write_byte(uint16_t addr, uint8_t val) {
     // External clock is not supported, do nothing
     if (addr == GB_SERIAL_IO_SC_ADDR && (val & 0x80) && (val & 0x1)) {
         // Append character to the string and set the IRQ down counter

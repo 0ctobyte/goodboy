@@ -14,9 +14,9 @@ public:
     virtual ~gb_memory_mapped_device();
 
     virtual uint8_t* get_mem();
-    gb_address_range_t get_address_range();
-    virtual bool in_range(uint16_t addr);
-    virtual uint16_t translate(uint16_t addr);
+    gb_address_range_t get_address_range() const;
+    virtual bool in_range(uint16_t addr) const;
+    virtual uint16_t translate(uint16_t addr) const;
     virtual uint8_t read_byte(uint16_t addr);
     virtual void write_byte(uint16_t addr, uint8_t val);
 

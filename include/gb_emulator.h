@@ -12,15 +12,12 @@
 class gb_emulator {
 public:
     gb_emulator();
-
     virtual ~gb_emulator();
 
     virtual void go();
-    virtual bool load_rom(std::string rom_filename);
+    virtual bool load_rom(const std::string& rom_filename);
 
 protected:
-    typedef std::vector<gb_memory_mapped_device*> gb_device_list;
-
     gb_memory_map            m_memory_map;
     gb_cpu                   m_cpu;
     gb_interrupt_controller  m_interrupt_controller;
