@@ -1,0 +1,14 @@
+target_sources(gb_emulator
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_cpu
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator_debugger
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator_opts
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_logger
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_memory_map
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_memory_mapped_device
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_ram
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_rom
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_serial_io_device
+        ${CMAKE_CURRENT_SOURCE_DIR}/main
+)

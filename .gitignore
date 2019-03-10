@@ -2,3 +2,7 @@
 *.bin
 *.gb
 gb_emulator
+*.cmake
+CMakeCache.txt
+CMakeFiles/
+build/
