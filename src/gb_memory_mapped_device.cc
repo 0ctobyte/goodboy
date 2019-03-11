@@ -9,11 +9,10 @@ gb_memory_mapped_device::gb_memory_mapped_device(uint16_t start_addr, size_t siz
 }
 
 gb_memory_mapped_device::~gb_memory_mapped_device() {
-    delete[] m_mem;
 }
 
 uint8_t* gb_memory_mapped_device::get_mem() {
-    return m_mem;
+    return m_mem.get();
 }
 
 gb_address_range_t gb_memory_mapped_device::get_address_range() const {

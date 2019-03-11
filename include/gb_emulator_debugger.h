@@ -19,8 +19,9 @@ public:
 private:
     typedef void (gb_emulator_debugger::*key_handler_t)();
     typedef std::unordered_map<int, key_handler_t> key_map_t;
+    typedef std::unique_ptr<ncurses_stream> ncurses_stream_ptr;
 
-    ncurses_stream*              m_nstream;
+    ncurses_stream_ptr           m_nstream;
     WINDOW*                      m_nwin;
     int                          m_nwin_pos;
     int                          m_nwin_max_lines;

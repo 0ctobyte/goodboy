@@ -21,9 +21,11 @@ public:
     virtual void write_byte(uint16_t addr, uint8_t val);
 
 protected:
+    typedef std::unique_ptr<uint8_t[]> uint8_t_ptr;
+
     uint16_t             m_start_addr;
     size_t               m_size;
-    uint8_t*             m_mem;
+    uint8_t_ptr          m_mem;
 };
 
 typedef std::shared_ptr<gb_memory_mapped_device> gb_memory_mapped_device_ptr;

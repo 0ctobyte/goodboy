@@ -4,7 +4,7 @@ project(gb_emulator)
 
 add_executable(gb_emulator "")
 
-target_compile_features(gb_emulator PRIVATE cxx_std_11)
+target_compile_features(gb_emulator PRIVATE cxx_std_14)
 target_compile_options(gb_emulator PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Weverything>
     $<$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Werror>

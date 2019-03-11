@@ -43,11 +43,7 @@ ncurses_stream::~ncurses_stream() {
 }
 
 gb_emulator_debugger::gb_emulator_debugger()
-    : gb_emulator(),
-      m_nwin_pos(0),
-      m_nwin_max_lines(10000),
-      m_nwin_lines(0),
-      m_nwin_cols(0)
+    : gb_emulator(), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
 {
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
@@ -65,11 +61,10 @@ gb_emulator_debugger::gb_emulator_debugger()
 
     // Save the cout stream and replace it with a custom one that works with ncurses
     // https://stackoverflow.com/questions/20126649/ncurses-and-ostream-class-method
-    m_nstream = new ncurses_stream(std::cout, m_nwin);
+    m_nstream = std::make_unique<ncurses_stream>(std::cout, m_nwin);
 }
 
 gb_emulator_debugger::~gb_emulator_debugger() {
-    delete m_nstream;
     // Close the ncurses library
     endwin();
 }
