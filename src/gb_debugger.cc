@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "gb_emulator_debugger.h"
+#include "gb_debugger.h"
 
 class ncurses_buf : public std::streambuf {
 public:
@@ -42,7 +42,7 @@ ncurses_stream::~ncurses_stream() {
     m_src.rdbuf(m_srcbuf);
 }
 
-gb_emulator_debugger::gb_emulator_debugger()
+gb_debugger::gb_debugger()
     : gb_emulator(), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
 {
     // Initialize the ncurses library, disable line-buffering and disable character echoing
@@ -64,12 +64,12 @@ gb_emulator_debugger::gb_emulator_debugger()
     m_nstream = std::make_unique<ncurses_stream>(std::cout, m_nwin);
 }
 
-gb_emulator_debugger::~gb_emulator_debugger() {
+gb_debugger::~gb_debugger() {
     // Close the ncurses library
     endwin();
 }
 
-void gb_emulator_debugger::go() {
+void gb_debugger::go() {
     for(int c = wgetch(m_nwin); c != 'q'; c = wgetch(m_nwin)) {
         if (m_continue) {
             _debugger_step_once();
@@ -84,58 +84,58 @@ void gb_emulator_debugger::go() {
     }
 }
 
-void gb_emulator_debugger::_debugger_step_once() {
+void gb_debugger::_debugger_step_once() {
     int cycles = m_cpu.step();
     m_cycles += static_cast<uint64_t>(cycles);
     m_interrupt_controller.update(cycles);
     m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
 }
 
-void gb_emulator_debugger::_debugger_dump_registers() {
+void gb_debugger::_debugger_dump_registers() {
     m_cpu.dump_registers();
     m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
 }
 
-void gb_emulator_debugger::_debugger_scroll_up_half_pg() {
+void gb_debugger::_debugger_scroll_up_half_pg() {
     // Half page up
     m_nwin_pos = std::max(0, m_nwin_pos-(m_nwin_lines/2));
 }
 
-void gb_emulator_debugger::_debugger_scroll_dn_half_pg() {
+void gb_debugger::_debugger_scroll_dn_half_pg() {
     // Half page down
     m_nwin_pos = std::min(m_nwin_pos+(m_nwin_lines/2), std::max(0, getcury(m_nwin)-m_nwin_lines));
 }
 
-void gb_emulator_debugger::_debugger_scroll_up_full_pg() {
+void gb_debugger::_debugger_scroll_up_full_pg() {
     // Full page up
     m_nwin_pos = std::max(0, m_nwin_pos-m_nwin_lines);
 }
 
-void gb_emulator_debugger::_debugger_scroll_dn_full_pg() {
+void gb_debugger::_debugger_scroll_dn_full_pg() {
     // Full page down
     m_nwin_pos = std::min(m_nwin_pos+m_nwin_lines, std::max(0, getcury(m_nwin)-m_nwin_lines));
 }
 
-void gb_emulator_debugger::_debugger_scroll_to_start() {
+void gb_debugger::_debugger_scroll_to_start() {
     // To bottom of buffer
     m_nwin_pos = std::max(m_nwin_pos, getcury(m_nwin)-m_nwin_lines);
 }
 
-void gb_emulator_debugger::_debugger_scroll_to_end() {
+void gb_debugger::_debugger_scroll_to_end() {
     // To top of buffer
     m_nwin_pos = 0;
 }
 
-void gb_emulator_debugger::_debugger_scroll_up_one_line() {
+void gb_debugger::_debugger_scroll_up_one_line() {
     // 1 line up
     m_nwin_pos = std::max(0, m_nwin_pos-1);
 }
 
-void gb_emulator_debugger::_debugger_scroll_dn_one_line() {
+void gb_debugger::_debugger_scroll_dn_one_line() {
     // 1 line down
     m_nwin_pos = std::min(m_nwin_pos+1, std::max(0, getcury(m_nwin)-m_nwin_lines));
 }
 
-void gb_emulator_debugger::_debugger_toggle_continue() {
+void gb_debugger::_debugger_toggle_continue() {
     m_continue = m_continue ? false : true;
 }

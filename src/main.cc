@@ -1,6 +1,6 @@
 #include "gb_logger.h"
 #include "gb_emulator_opts.h"
-#include "gb_emulator_debugger.h"
+#include "gb_debugger.h"
 
 int main(int argc, char **argv) {
     gb_emulator_opts options (argc, argv);
@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     if (!options.parse_opts()) return EXIT_FAILURE;
 
     if (options.m_debugger) {
-        gb_emulator_debugger gbm;
+        gb_debugger gbm;
 
         // Need to setup stream with gb_logger again since gb_emulator_debugger modifies the
         // the reference of the underlying streambuf
