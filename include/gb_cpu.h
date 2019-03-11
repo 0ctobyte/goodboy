@@ -64,6 +64,7 @@ private:
     gb_memory_map&             m_memory_map;
     eidiflag_t                 m_eidi_flag;
     bool                       m_interrupt_enable;
+    bool                       m_halted;
 
     // Op execution routines
     int _op_exec_cb(const instruction_t& instruction);

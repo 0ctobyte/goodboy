@@ -540,7 +540,7 @@
 }
 
 gb_cpu::gb_cpu(gb_memory_map& memory_map)
-    : m_memory_map(memory_map), m_eidi_flag(EIDI_NONE), m_interrupt_enable(true)
+    : m_memory_map(memory_map), m_eidi_flag(EIDI_NONE), m_interrupt_enable(true), m_halted(false)
 {
     m_instructions = std::vector<instruction_t>(INSTRUCTIONS_LIST_INIT);
     m_cb_instructions = std::vector<instruction_t>(CB_INSTRUCTIONS_LIST_INIT);
@@ -570,6 +570,9 @@ uint16_t gb_cpu::get_pc() const {
 }
 
 bool gb_cpu::handle_interrupt(uint16_t jump_address) {
+    // Always break out of halted mode if an interrupt occurs
+    m_halted = false;
+
     if (!m_interrupt_enable) return false;
 
     // Disable interrupts
@@ -585,6 +588,9 @@ bool gb_cpu::handle_interrupt(uint16_t jump_address) {
 }
 
 int gb_cpu::step() {
+    // Check if in halted mode, do nothing and return 4 CPU clock cycles (i.e. 1 system clock cycle)
+    if (m_halted) return 4;
+
     uint8_t opcode = m_memory_map.read_byte(m_registers.pc);
 
     const instruction_t& instruction = m_instructions[opcode];
@@ -642,7 +648,7 @@ int gb_cpu::_op_exec_stop(const instruction_t& instruction) {
 int gb_cpu::_op_exec_halt(const instruction_t& instruction) {
     uint16_t pc = m_registers.pc++;
 
-    // TODO: Implement halt
+    m_halted = true;
 
     (this->*(instruction.op_print))(instruction.disassembly, pc, 0, 0);
     return instruction.cycles_hi;
