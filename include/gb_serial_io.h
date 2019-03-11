@@ -2,7 +2,6 @@
 #define GB_SERIAL_IO_H_
 
 #include <string>
-#include <tuple>
 
 #include "gb_memory_mapped_device.h"
 #include "gb_interrupt_source.h"

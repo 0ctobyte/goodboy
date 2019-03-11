@@ -12,5 +12,6 @@ target_sources(gb_emulator
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_ram
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_rom
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_serial_io
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_timer
         ${CMAKE_CURRENT_SOURCE_DIR}/main
 )

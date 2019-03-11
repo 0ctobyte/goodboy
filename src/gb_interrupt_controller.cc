@@ -6,33 +6,19 @@
 #define GB_IFLAGS_ADDR   (0xFF0F)
 #define GB_IENABLE_ADDR  (0xFFFF)
 
-gb_interrupt_controller::gb_interrupt_flags::gb_interrupt_flags()
-    : gb_memory_mapped_device(GB_IFLAGS_ADDR, 1)
-{
-}
-
-gb_interrupt_controller::gb_interrupt_flags::~gb_interrupt_flags() {
-}
-
-gb_interrupt_controller::gb_interrupt_enable::gb_interrupt_enable()
-    : gb_memory_mapped_device(GB_IENABLE_ADDR, 1)
-{
-}
-
-gb_interrupt_controller::gb_interrupt_enable::~gb_interrupt_enable() {
-}
-
 gb_interrupt_controller::gb_interrupt_controller(gb_memory_map& memory_map, gb_cpu& cpu)
-    : m_iflags(std::make_shared<gb_interrupt_flags>()),
-      m_ienable(std::make_shared<gb_interrupt_enable>()),
+    : m_iflags(std::make_shared<gb_memory_mapped_device>(GB_IFLAGS_ADDR, 1)),
+      m_ienable(std::make_shared<gb_memory_mapped_device>(GB_IENABLE_ADDR, 1)),
       m_cpu(cpu)
 {
     // Add the interrupt flags and enable register to the memory map
     gb_address_range_t addr_range = m_iflags->get_address_range();
     memory_map.add_readable_device(m_iflags, std::get<0>(addr_range), std::get<1>(addr_range));
+    memory_map.add_writeable_device(m_iflags, std::get<0>(addr_range), std::get<1>(addr_range));
 
     addr_range = m_ienable->get_address_range();
     memory_map.add_readable_device(m_ienable, std::get<0>(addr_range), std::get<1>(addr_range));
+    memory_map.add_writeable_device(m_ienable, std::get<0>(addr_range), std::get<1>(addr_range));
 }
 
 gb_interrupt_controller::~gb_interrupt_controller() {
@@ -56,8 +42,12 @@ void gb_interrupt_controller::update(int cycles) {
     // Keep track of the highest priority interrupt source that last raised an interrupt; this is the interrupt we redirect the CPU to handle
     for (gb_interrupt_source_ptr& isource : m_interrupt_sources) {
         bool interrupt_raised = isource->update(cycles);
-        if (interrupt_raised) {
-            m_iflags->write_byte(GB_IFLAGS_ADDR, m_iflags->read_byte(GB_IFLAGS_ADDR) | isource->get_flag_mask());
+        uint8_t iflags = m_iflags->read_byte(GB_IFLAGS_ADDR);
+        uint8_t flag_mask = isource->get_flag_mask();
+
+        // Also check if the flag bit has been set externally (i.e. by a LD instruction)
+        if (interrupt_raised || (iflags & flag_mask)) {
+            m_iflags->write_byte(GB_IFLAGS_ADDR, iflags | flag_mask);
             highest_priority_isource = isource.get();
         }
     }

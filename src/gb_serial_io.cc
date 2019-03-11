@@ -22,6 +22,18 @@ gb_serial_io::gb_serial_io()
 gb_serial_io::~gb_serial_io() {
 }
 
+void gb_serial_io::write_byte(uint16_t addr, uint8_t val) {
+    gb_memory_mapped_device::write_byte(addr, val);
+
+    // External clock is not supported, do nothing
+    if (addr == GB_SERIAL_IO_SC_ADDR && (val & 0x80) && (val & 0x1)) {
+        // Append character to the string and set the IRQ down counter
+        // = cpu_freq / (serial_io_freq/8) = # of CPU clock cycles to wait before asserting an interrupt (divide by 8 because it needs to shift in/out 8 bits)
+        m_str.push_back(static_cast<char>(gb_memory_mapped_device::read_byte(GB_SERIAL_IO_SB_ADDR)));
+        m_irq_counter = GB_SERIAL_IO_CYCLES_TO_IRQ;
+    }
+}
+
 bool gb_serial_io::update(int cycles) {
     if (m_irq_counter == 0) return false;
 
@@ -46,16 +58,4 @@ bool gb_serial_io::update(int cycles) {
     }
 
     return false;
-}
-
-void gb_serial_io::write_byte(uint16_t addr, uint8_t val) {
-    // External clock is not supported, do nothing
-    if (addr == GB_SERIAL_IO_SC_ADDR && (val & 0x80) && (val & 0x1)) {
-        // Append character to the string and set the IRQ down counter
-        // = cpu_freq / (serial_io_freq/8) = # of CPU clock cycles to wait before asserting an interrupt (divide by 8 because it needs to shift in/out 8 bits)
-        m_str.push_back(static_cast<char>(gb_memory_mapped_device::read_byte(GB_SERIAL_IO_SB_ADDR)));
-        m_irq_counter = GB_SERIAL_IO_CYCLES_TO_IRQ;
-    } else {
-        gb_memory_mapped_device::write_byte(addr, val);
-    }
 }

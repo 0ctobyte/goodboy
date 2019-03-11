@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <vector>
 #include <tuple>
-#include <memory>
 
 typedef std::tuple<uint16_t,size_t> gb_address_range_t;
 
@@ -21,11 +20,11 @@ public:
     virtual void write_byte(uint16_t addr, uint8_t val);
 
 protected:
-    typedef std::unique_ptr<uint8_t[]> uint8_t_ptr;
+    typedef std::vector<uint8_t> gb_mem_t;
 
     uint16_t             m_start_addr;
     size_t               m_size;
-    uint8_t_ptr          m_mem;
+    gb_mem_t             m_mem;
 };
 
 typedef std::shared_ptr<gb_memory_mapped_device> gb_memory_mapped_device_ptr;

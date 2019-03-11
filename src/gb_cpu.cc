@@ -540,9 +540,7 @@
 }
 
 gb_cpu::gb_cpu(gb_memory_map& memory_map)
-    : m_memory_map(memory_map),
-      m_eidi_flag(EIDI_NONE),
-      m_interrupt_enable(false)
+    : m_memory_map(memory_map), m_eidi_flag(EIDI_NONE), m_interrupt_enable(true)
 {
     m_instructions = std::vector<instruction_t>(INSTRUCTIONS_LIST_INIT);
     m_cb_instructions = std::vector<instruction_t>(CB_INSTRUCTIONS_LIST_INIT);

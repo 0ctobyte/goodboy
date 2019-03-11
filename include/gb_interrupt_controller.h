@@ -4,7 +4,6 @@
 #include <cstdint>
 
 #include "gb_memory_map.h"
-#include "gb_memory_mapped_device.h"
 #include "gb_interrupt_source.h"
 #include "gb_cpu.h"
 
@@ -17,25 +16,10 @@ public:
     void update(int cycles);
 
 private:
-    class gb_interrupt_flags : public gb_memory_mapped_device {
-    public:
-        gb_interrupt_flags();
-        virtual ~gb_interrupt_flags() override;
-    };
-
-    class gb_interrupt_enable : public gb_memory_mapped_device {
-    public:
-        gb_interrupt_enable();
-        virtual ~gb_interrupt_enable() override;
-    };
-
-    typedef std::shared_ptr<gb_interrupt_flags>  gb_interrupt_flags_ptr;
-    typedef std::shared_ptr<gb_interrupt_enable> gb_interrupt_enable_ptr;
-
     // The gb_interrupt_flags and gb_interrupt_enable objects contain the memory mapped
     // flags and enable registers
-    gb_interrupt_flags_ptr               m_iflags;
-    gb_interrupt_enable_ptr              m_ienable;
+    gb_memory_mapped_device_ptr          m_iflags;
+    gb_memory_mapped_device_ptr          m_ienable;
 
     // The interrupt controller needs access to the CPU to send it interrupt sources to handle
     gb_cpu&                              m_cpu;

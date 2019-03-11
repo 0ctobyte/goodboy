@@ -4,12 +4,10 @@
 #include "gb_rom.h"
 #include "gb_ram.h"
 #include "gb_serial_io.h"
+#include "gb_timer.h"
 
 gb_emulator::gb_emulator()
-    : m_memory_map(),
-      m_cpu(m_memory_map),
-      m_interrupt_controller(m_memory_map, m_cpu),
-      m_cycles(0)
+    : m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_map, m_cpu), m_cycles(0)
 {
 }
 
@@ -55,8 +53,15 @@ bool gb_emulator::load_rom(const std::string& rom_filename) {
     m_memory_map.add_writeable_device(sio, std::get<0>(addr_range), std::get<1>(addr_range));
     m_interrupt_controller.add_interrupt_source(sio);
 
+    // Add Timer
+    gb_timer_ptr timer = std::make_shared<gb_timer>();
+    addr_range = timer->get_address_range();
+    m_memory_map.add_readable_device(timer, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_memory_map.add_writeable_device(timer, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_interrupt_controller.add_interrupt_source(timer);
+
     // Add 128 bytes of high RAM (used for stack and temp variables)
-    gb_ram_ptr high_ram = std::make_shared<gb_ram>(0xFF80, 0x80);
+    gb_ram_ptr high_ram = std::make_shared<gb_ram>(0xFF80, 0x7F);
     addr_range = high_ram->get_address_range();
     m_memory_map.add_readable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
