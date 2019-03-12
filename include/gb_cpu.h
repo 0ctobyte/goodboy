@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
+#include <array>
 
 #include "gb_memory_map.h"
 
@@ -18,6 +18,14 @@ public:
     bool handle_interrupt(uint16_t jump_address);
 
 private:
+    struct instruction_t;
+
+    using operand_get_func_t   = uint16_t (gb_cpu::*)();
+    using operand_set_func_t   = void (gb_cpu::*)(uint16_t, uint16_t);
+    using op_print_func_t      = void (gb_cpu::*)(const std::string&, uint16_t, uint16_t, uint16_t) const;
+    using op_exec_func_t       = int (gb_cpu::*)(const instruction_t&);
+    using gb_instruction_map_t = std::array<instruction_t, 256>;
+
     struct registers_t {
         union { struct { uint8_t f; uint8_t a; }; uint16_t af; };
         union { struct { uint8_t c; uint8_t b; }; uint16_t bc; };
@@ -33,13 +41,6 @@ private:
         FLAGS_N = 0x40,
         FLAGS_Z = 0x80
     };
-
-    struct instruction_t;
-
-    using operand_get_func_t = uint16_t (gb_cpu::*)();
-    using operand_set_func_t = void (gb_cpu::*)(uint16_t, uint16_t);
-    using op_print_func_t    = void (gb_cpu::*)(const std::string&, uint16_t, uint16_t, uint16_t) const;
-    using op_exec_func_t     = int (gb_cpu::*)(const instruction_t&);
 
     struct instruction_t {
         std::string        disassembly;
@@ -58,13 +59,13 @@ private:
         EIDI_IDISABLE
     };
 
-    registers_t                m_registers;
-    std::vector<instruction_t> m_instructions;
-    std::vector<instruction_t> m_cb_instructions;
-    gb_memory_map&             m_memory_map;
-    eidiflag_t                 m_eidi_flag;
-    bool                       m_interrupt_enable;
-    bool                       m_halted;
+    static const gb_instruction_map_t m_instructions;
+    static const gb_instruction_map_t m_cb_instructions;
+    registers_t                       m_registers;
+    gb_memory_map&                    m_memory_map;
+    eidiflag_t                        m_eidi_flag;
+    bool                              m_interrupt_enable;
+    bool                              m_halted;
 
     // Op execution routines
     int _op_exec_cb(const instruction_t& instruction);
