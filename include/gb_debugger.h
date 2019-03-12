@@ -2,6 +2,7 @@
 #define GB_DEBUGGER_H_
 
 #include <unordered_map>
+#include <functional>
 
 #include <ncurses.h>
 
@@ -17,11 +18,11 @@ public:
     virtual void go() override;
 
 private:
-    using key_handler_t      = void (gb_debugger::*)();
+    using key_handler_t      = std::function<void()>;
     using key_map_t          = std::unordered_map<int, key_handler_t>;
     using ncurses_stream_ptr = std::unique_ptr<ncurses_stream>;
 
-    static const key_map_t       m_key_map;
+    const key_map_t              m_key_map;
     ncurses_stream_ptr           m_nstream;
     WINDOW*                      m_nwin;
     int                          m_nwin_pos;

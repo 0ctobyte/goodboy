@@ -3,6 +3,8 @@
 
 #include <string>
 #include <unordered_map>
+#include <functional>
+#include <array>
 
 class gb_emulator_opts {
 public:
@@ -19,23 +21,15 @@ public:
     bool parse_opts();
 
 private:
-    using opt_handler_t = bool (gb_emulator_opts::*)();
+    using opt_handler_t = std::function<bool()>;
     using opt_map_t     = std::unordered_map<int, opt_handler_t>;
+    using opt_doc_t     = std::array<std::string, 4>;
 
-    int                            m_argc;
-    char**                         m_argv;
-    std::string                    m_opt_str = "hdt";
-    std::string                    m_opt_doc[4] = {
-        "-h          : Print this help and exit",
-        "-d          : Run in debugger mode",
-        "-t          : Enable tracing",
-        "rom_file    : Gameboy program to run on the emulator"
-    };
-    opt_map_t                      m_opt_map = {
-        {'h', &gb_emulator_opts::_opt_print_doc},
-        {'d', &gb_emulator_opts::_opt_set_debugger_flag},
-        {'t', &gb_emulator_opts::_opt_set_tracing_flag}
-    };
+    int               m_argc;
+    char**            m_argv;
+    const std::string m_opt_str;
+    const opt_doc_t   m_opt_doc;
+    const opt_map_t   m_opt_map;
 
     bool _opt_set_tracing_flag();
     bool _opt_set_debugger_flag();

@@ -42,22 +42,23 @@ ncurses_stream::~ncurses_stream() {
     m_src.rdbuf(m_srcbuf);
 }
 
-const gb_debugger::key_map_t gb_debugger::m_key_map = {
-    {'n', &gb_debugger::_debugger_step_once},
-    {'r', &gb_debugger::_debugger_dump_registers},
-    {'u', &gb_debugger::_debugger_scroll_up_half_pg},
-    {'d', &gb_debugger::_debugger_scroll_dn_half_pg},
-    {'b', &gb_debugger::_debugger_scroll_up_full_pg},
-    {'f', &gb_debugger::_debugger_scroll_dn_full_pg},
-    {'G', &gb_debugger::_debugger_scroll_to_start},
-    {'g', &gb_debugger::_debugger_scroll_to_end},
-    {'c', &gb_debugger::_debugger_toggle_continue},
-    {KEY_UP, &gb_debugger::_debugger_scroll_up_one_line},
-    {KEY_DOWN, &gb_debugger::_debugger_scroll_dn_one_line}
-};
+#define KEY_MAP_INIT \
+{\
+    {'n', std::bind(&gb_debugger::_debugger_step_once, this)},\
+    {'r', std::bind(&gb_debugger::_debugger_dump_registers, this)},\
+    {'u', std::bind(&gb_debugger::_debugger_scroll_up_half_pg, this)},\
+    {'d', std::bind(&gb_debugger::_debugger_scroll_dn_half_pg, this)},\
+    {'b', std::bind(&gb_debugger::_debugger_scroll_up_full_pg, this)},\
+    {'f', std::bind(&gb_debugger::_debugger_scroll_dn_full_pg, this)},\
+    {'G', std::bind(&gb_debugger::_debugger_scroll_to_start, this)},\
+    {'g', std::bind(&gb_debugger::_debugger_scroll_to_end, this)},\
+    {'c', std::bind(&gb_debugger::_debugger_toggle_continue, this)},\
+    {KEY_UP, std::bind(&gb_debugger::_debugger_scroll_up_one_line, this)},\
+    {KEY_DOWN, std::bind(&gb_debugger::_debugger_scroll_dn_one_line, this)}\
+}\
 
 gb_debugger::gb_debugger()
-    : gb_emulator(), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
+    : gb_emulator(), m_key_map(KEY_MAP_INIT), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
 {
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
@@ -94,7 +95,7 @@ void gb_debugger::go() {
 
         try {
             key_handler_t key_handler = m_key_map.at(c);
-            (this->*key_handler)();
+            key_handler();
         } catch (const std::out_of_range& oor) {}
 
         prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines-1, m_nwin_cols);
