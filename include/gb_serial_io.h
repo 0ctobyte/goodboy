@@ -19,6 +19,6 @@ private:
     int         m_irq_counter;
 };
 
-typedef std::shared_ptr<gb_serial_io> gb_serial_io_ptr;
+using gb_serial_io_ptr = std::shared_ptr<gb_serial_io>;
 
 #endif // GB_SERIAL_IO_H_

@@ -20,7 +20,7 @@ public:
     void write_byte(uint16_t addr, uint8_t val);
 
 private:
-    typedef std::vector<gb_memory_mapped_device_ptr> gb_device_map_t;
+    using gb_device_map_t = std::vector<gb_memory_mapped_device_ptr>;
 
     // Memory is split into LOMEM (0000 - E000) and HIMEM (FE00 - 10000)
     // This way we can split up the granularity of region sizes for each hash table

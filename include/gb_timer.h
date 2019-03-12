@@ -19,6 +19,6 @@ private:
     unsigned int m_timer_clk_select;
 };
 
-typedef std::shared_ptr<gb_timer> gb_timer_ptr;
+using gb_timer_ptr = std::shared_ptr<gb_timer>;
 
 #endif // GB_TIMER_H_

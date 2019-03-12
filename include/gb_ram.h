@@ -12,6 +12,6 @@ public:
     virtual ~gb_ram() override;
 };
 
-typedef std::shared_ptr<gb_ram> gb_ram_ptr;
+using gb_ram_ptr = std::shared_ptr<gb_ram>;
 
 #endif // GB_RAM_

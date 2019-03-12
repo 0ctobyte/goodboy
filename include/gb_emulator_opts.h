@@ -19,8 +19,8 @@ public:
     bool parse_opts();
 
 private:
-    typedef bool (gb_emulator_opts::*opt_handler_t)();
-    typedef std::unordered_map<int, opt_handler_t> opt_map_t;
+    using opt_handler_t = bool (gb_emulator_opts::*)();
+    using opt_map_t     = std::unordered_map<int, opt_handler_t>;
 
     int                            m_argc;
     char**                         m_argv;

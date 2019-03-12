@@ -36,10 +36,10 @@ private:
 
     struct instruction_t;
 
-    typedef uint16_t (gb_cpu::*operand_get_func_t)();
-    typedef void (gb_cpu::*operand_set_func_t)(uint16_t, uint16_t);
-    typedef void (gb_cpu::*op_print_func_t)(const std::string&, uint16_t, uint16_t, uint16_t) const;
-    typedef int (gb_cpu::*op_exec_func_t)(const instruction_t&);
+    using operand_get_func_t = uint16_t (gb_cpu::*)();
+    using operand_set_func_t = void (gb_cpu::*)(uint16_t, uint16_t);
+    using op_print_func_t    = void (gb_cpu::*)(const std::string&, uint16_t, uint16_t, uint16_t) const;
+    using op_exec_func_t     = int (gb_cpu::*)(const instruction_t&);
 
     struct instruction_t {
         std::string        disassembly;

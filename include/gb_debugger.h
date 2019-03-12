@@ -17,9 +17,9 @@ public:
     virtual void go() override;
 
 private:
-    typedef void (gb_debugger::*key_handler_t)();
-    typedef std::unordered_map<int, key_handler_t> key_map_t;
-    typedef std::unique_ptr<ncurses_stream> ncurses_stream_ptr;
+    using key_handler_t      = void (gb_debugger::*)();
+    using key_map_t          = std::unordered_map<int, key_handler_t>;
+    using ncurses_stream_ptr = std::unique_ptr<ncurses_stream>;
 
     static const key_map_t       m_key_map;
     ncurses_stream_ptr           m_nstream;

@@ -14,6 +14,6 @@ public:
     virtual void write_byte(uint16_t addr, uint8_t val) override;
 };
 
-typedef std::shared_ptr<gb_rom> gb_rom_ptr;
+using gb_rom_ptr = std::shared_ptr<gb_rom>;
 
 #endif // GB_ROM_

@@ -18,6 +18,6 @@ protected:
     uint8_t  m_flag_bit;
 };
 
-typedef std::shared_ptr<gb_interrupt_source> gb_interrupt_source_ptr;
+using gb_interrupt_source_ptr = std::shared_ptr<gb_interrupt_source>;
 
 #endif // GB_INTERRUPT_SOURCE_H_
