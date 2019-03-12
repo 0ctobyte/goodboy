@@ -6,9 +6,9 @@
 #define GB_IFLAGS_ADDR   (0xFF0F)
 #define GB_IENABLE_ADDR  (0xFFFF)
 
-gb_interrupt_controller::gb_interrupt_controller(gb_memory_map& memory_map, gb_cpu& cpu)
-    : m_iflags(std::make_shared<gb_memory_mapped_device>(GB_IFLAGS_ADDR, 1)),
-      m_ienable(std::make_shared<gb_memory_mapped_device>(GB_IENABLE_ADDR, 1)),
+gb_interrupt_controller::gb_interrupt_controller(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_cpu& cpu)
+    : m_iflags(std::make_shared<gb_memory_mapped_device>(memory_manager, GB_IFLAGS_ADDR, 1)),
+      m_ienable(std::make_shared<gb_memory_mapped_device>(memory_manager, GB_IENABLE_ADDR, 1)),
       m_cpu(cpu)
 {
     // Add the interrupt flags and enable register to the memory map

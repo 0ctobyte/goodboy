@@ -12,8 +12,8 @@
 #define GB_SERIAL_IO_INTERNAL_CLOCK_FREQ  (8192)
 #define GB_SERIAL_IO_CYCLES_TO_IRQ        ((CLOCK_SPEED)/((GB_SERIAL_IO_INTERNAL_CLOCK_FREQ)/8))
 
-gb_serial_io::gb_serial_io()
-    : gb_memory_mapped_device(GB_SERIAL_IO_SB_ADDR, 2),
+gb_serial_io::gb_serial_io(gb_memory_manager& memory_manager)
+    : gb_memory_mapped_device(memory_manager, GB_SERIAL_IO_SB_ADDR, 2),
       gb_interrupt_source(GB_SERIAL_IO_JUMP_ADDR, GB_SERIAL_IO_FLAG_BIT),
       m_irq_counter(0)
 {

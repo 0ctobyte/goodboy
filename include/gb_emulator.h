@@ -18,6 +18,7 @@ public:
     virtual void load_rom(const std::string& rom_filename);
 
 protected:
+    gb_memory_manager        m_memory_manager;
     gb_memory_map            m_memory_map;
     gb_cpu                   m_cpu;
     gb_interrupt_controller  m_interrupt_controller;

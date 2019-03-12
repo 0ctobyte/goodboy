@@ -9,7 +9,7 @@
 
 class gb_interrupt_controller {
 public:
-    gb_interrupt_controller(gb_memory_map& memory_map, gb_cpu& cpu);
+    gb_interrupt_controller(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_cpu& cpu);
     ~gb_interrupt_controller();
 
     void add_interrupt_source(const gb_interrupt_source_ptr& interrupt_source);

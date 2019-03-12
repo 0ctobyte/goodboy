@@ -7,6 +7,7 @@ target_sources(gb_emulator
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_interrupt_controller
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_interrupt_source
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_logger
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_memory_manager
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_memory_map
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_memory_mapped_device
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_ram

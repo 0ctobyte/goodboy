@@ -1,8 +1,8 @@
 #include "gb_logger.h"
 #include "gb_rom.h"
 
-gb_rom::gb_rom(uint16_t start_addr, size_t size)
-    : gb_memory_mapped_device(start_addr, size)
+gb_rom::gb_rom(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size)
+    : gb_memory_mapped_device(memory_manager, start_addr, size)
 {
 }
 

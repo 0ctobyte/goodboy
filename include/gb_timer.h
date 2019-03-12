@@ -6,7 +6,7 @@
 
 class gb_timer : public gb_memory_mapped_device, public gb_interrupt_source {
 public:
-    gb_timer();
+    gb_timer(gb_memory_manager& memory_manager);
     virtual ~gb_timer() override;
 
     virtual void write_byte(uint16_t addr, uint8_t val) override;

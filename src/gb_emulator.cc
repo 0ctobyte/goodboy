@@ -9,7 +9,7 @@
 #include "gb_timer.h"
 
 gb_emulator::gb_emulator()
-    : m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_map, m_cpu), m_cycles(0)
+    : m_memory_manager(), m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_manager, m_memory_map, m_cpu), m_cycles(0)
 {
 }
 
@@ -30,7 +30,7 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     rom_file.seekg(0, rom_file.beg);
 
     // First 32KB of ROM
-    gb_rom_ptr rom = std::make_shared<gb_rom>(0x0000, 0x8000);
+    gb_rom_ptr rom = std::make_shared<gb_rom>(m_memory_manager, 0x0000, 0x8000);
 
     rom_file.read(reinterpret_cast<char*>(rom->get_mem()), std::min(0x8000, binsize));
 
@@ -41,33 +41,33 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     m_memory_map.add_readable_device(rom, std::get<0>(addr_range), std::get<1>(addr_range));
 
     // Add 8KB of external RAM (on the cartridge)
-    gb_ram_ptr ext_ram = std::make_shared<gb_ram>(0xA000, 0x2000);
+    gb_ram_ptr ext_ram = std::make_shared<gb_ram>(m_memory_manager, 0xA000, 0x2000);
     addr_range = ext_ram->get_address_range();
     m_memory_map.add_readable_device(ext_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(ext_ram, std::get<0>(addr_range), std::get<1>(addr_range));
 
     // Another 8KB of work RAM (on the gameboy)
-    gb_ram_ptr work_ram = std::make_shared<gb_ram>(0xC000, 0x2000);
+    gb_ram_ptr work_ram = std::make_shared<gb_ram>(m_memory_manager, 0xC000, 0x2000);
     addr_range = work_ram->get_address_range();
     m_memory_map.add_readable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
 
     // Add Serial IO device for printing to terminal
-    gb_serial_io_ptr sio = std::make_shared<gb_serial_io>();
+    gb_serial_io_ptr sio = std::make_shared<gb_serial_io>(m_memory_manager);
     addr_range = sio->get_address_range();
     m_memory_map.add_readable_device(sio, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(sio, std::get<0>(addr_range), std::get<1>(addr_range));
     m_interrupt_controller.add_interrupt_source(sio);
 
     // Add Timer
-    gb_timer_ptr timer = std::make_shared<gb_timer>();
+    gb_timer_ptr timer = std::make_shared<gb_timer>(m_memory_manager);
     addr_range = timer->get_address_range();
     m_memory_map.add_readable_device(timer, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(timer, std::get<0>(addr_range), std::get<1>(addr_range));
     m_interrupt_controller.add_interrupt_source(timer);
 
     // Add 128 bytes of high RAM (used for stack and temp variables)
-    gb_ram_ptr high_ram = std::make_shared<gb_ram>(0xFF80, 0x7F);
+    gb_ram_ptr high_ram = std::make_shared<gb_ram>(m_memory_manager, 0xFF80, 0x7F);
     addr_range = high_ram->get_address_range();
     m_memory_map.add_readable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));

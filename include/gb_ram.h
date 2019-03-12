@@ -8,7 +8,7 @@
 
 class gb_ram : public gb_memory_mapped_device {
 public:
-    gb_ram(uint16_t start_addr, size_t size);
+    gb_ram(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size);
     virtual ~gb_ram() override;
 };
 

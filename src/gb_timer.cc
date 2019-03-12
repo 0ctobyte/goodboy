@@ -20,8 +20,8 @@
 
 const std::array<int, 4> _timer_clk_select_table = {GB_TIMER_COUNTER_4096, GB_TIMER_COUNTER_262144, GB_TIMER_COUNTER_65536, GB_TIMER_COUNTER_16384};
 
-gb_timer::gb_timer()
-    : gb_memory_mapped_device(GB_TIMER_DIV_ADDR, 4),
+gb_timer::gb_timer(gb_memory_manager& memory_manager)
+    : gb_memory_mapped_device(memory_manager, GB_TIMER_DIV_ADDR, 4),
       gb_interrupt_source(GB_TIMER_JUMP_ADDR, GB_TIMER_FLAG_BIT),
       m_div_counter(0), m_timer_counter(0), m_timer_start(false), m_timer_clk_select(0)
 {
