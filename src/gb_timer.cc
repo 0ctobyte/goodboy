@@ -18,12 +18,18 @@
 #define GB_TIMER_COUNTER_65536  ((CLOCK_SPEED)/65536)
 #define GB_TIMER_COUNTER_16384  ((CLOCK_SPEED)/16384)
 
-const std::array<int, 4> _timer_clk_select_table = {GB_TIMER_COUNTER_4096, GB_TIMER_COUNTER_262144, GB_TIMER_COUNTER_65536, GB_TIMER_COUNTER_16384};
+#define TIMER_CLK_SELECT_TBL_INIT \
+{{\
+   GB_TIMER_COUNTER_4096,\
+   GB_TIMER_COUNTER_262144,\
+   GB_TIMER_COUNTER_65536,\
+   GB_TIMER_COUNTER_16384\
+}}
 
 gb_timer::gb_timer(gb_memory_manager& memory_manager)
     : gb_memory_mapped_device(memory_manager, GB_TIMER_DIV_ADDR, 4),
       gb_interrupt_source(GB_TIMER_JUMP_ADDR, GB_TIMER_FLAG_BIT),
-      m_div_counter(0), m_timer_counter(0), m_timer_start(false), m_timer_clk_select(0)
+      m_timer_clk_select_tbl(TIMER_CLK_SELECT_TBL_INIT), m_div_counter(0), m_timer_counter(0), m_timer_start(false), m_timer_clk_select(0)
 {
 }
 
@@ -36,7 +42,7 @@ void gb_timer::write_byte(uint16_t addr, uint8_t val) {
         // val[1:0] == clock select: 00 - 4096 Hz, 01 - 262144 Hz, 10 - 65536 Hz, 11 - 16384 Hz
         m_timer_start = (val & 0x4);
         m_timer_clk_select = val & 0x3;
-        m_timer_counter = _timer_clk_select_table[m_timer_clk_select];
+        m_timer_counter = m_timer_clk_select_tbl.at(m_timer_clk_select);
     }
 
     gb_memory_mapped_device::write_byte(addr, val);
@@ -55,7 +61,7 @@ bool gb_timer::update(int cycles) {
     uint8_t tima = gb_memory_mapped_device::read_byte(GB_TIMER_TIMA_ADDR) + 1;
     if (m_timer_counter == 0) {
         gb_memory_mapped_device::write_byte(GB_TIMER_TIMA_ADDR, tima);
-        m_timer_counter = _timer_clk_select_table[m_timer_clk_select];
+        m_timer_counter = m_timer_clk_select_tbl.at(m_timer_clk_select);
     }
 
     // Check if the TIMA register overflowed, if so raise an interrupt and reload the TIMA register with the value in the TMA register
