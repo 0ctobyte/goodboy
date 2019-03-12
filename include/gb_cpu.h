@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <array>
+#include <functional>
 
 #include "gb_memory_map.h"
 
@@ -20,10 +21,10 @@ public:
 private:
     struct instruction_t;
 
-    using operand_get_func_t   = uint16_t (gb_cpu::*)();
-    using operand_set_func_t   = void (gb_cpu::*)(uint16_t, uint16_t);
-    using op_print_func_t      = void (gb_cpu::*)(const std::string&, uint16_t, uint16_t, uint16_t) const;
-    using op_exec_func_t       = int (gb_cpu::*)(const instruction_t&);
+    using op_print_func_t      = std::function<void(const std::string&,uint16_t,uint16_t,uint16_t)>;
+    using operand_get_func_t   = std::function<uint16_t()>;
+    using operand_set_func_t   = std::function<void(uint16_t,uint16_t)>;
+    using op_exec_func_t       = std::function<int(const instruction_t&)>;
     using gb_instruction_map_t = std::array<instruction_t, 256>;
 
     struct registers_t {
@@ -59,13 +60,13 @@ private:
         EIDI_IDISABLE
     };
 
-    static const gb_instruction_map_t m_instructions;
-    static const gb_instruction_map_t m_cb_instructions;
-    registers_t                       m_registers;
-    gb_memory_map&                    m_memory_map;
-    eidiflag_t                        m_eidi_flag;
-    bool                              m_interrupt_enable;
-    bool                              m_halted;
+    const gb_instruction_map_t m_instructions;
+    const gb_instruction_map_t m_cb_instructions;
+    registers_t                m_registers;
+    gb_memory_map&             m_memory_map;
+    eidiflag_t                 m_eidi_flag;
+    bool                       m_interrupt_enable;
+    bool                       m_halted;
 
     // Op execution routines
     int _op_exec_cb(const instruction_t& instruction);
