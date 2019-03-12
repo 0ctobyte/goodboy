@@ -42,6 +42,20 @@ ncurses_stream::~ncurses_stream() {
     m_src.rdbuf(m_srcbuf);
 }
 
+const gb_debugger::key_map_t gb_debugger::m_key_map = {
+    {'n', &gb_debugger::_debugger_step_once},
+    {'r', &gb_debugger::_debugger_dump_registers},
+    {'u', &gb_debugger::_debugger_scroll_up_half_pg},
+    {'d', &gb_debugger::_debugger_scroll_dn_half_pg},
+    {'b', &gb_debugger::_debugger_scroll_up_full_pg},
+    {'f', &gb_debugger::_debugger_scroll_dn_full_pg},
+    {'G', &gb_debugger::_debugger_scroll_to_start},
+    {'g', &gb_debugger::_debugger_scroll_to_end},
+    {'c', &gb_debugger::_debugger_toggle_continue},
+    {KEY_UP, &gb_debugger::_debugger_scroll_up_one_line},
+    {KEY_DOWN, &gb_debugger::_debugger_scroll_dn_one_line}
+};
+
 gb_debugger::gb_debugger()
     : gb_emulator(), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
 {
@@ -66,7 +80,10 @@ gb_debugger::gb_debugger()
 
 gb_debugger::~gb_debugger() {
     // Close the ncurses library
-    endwin();
+    if (m_nwin != nullptr) {
+        delwin(m_nwin);
+        endwin();
+    }
 }
 
 void gb_debugger::go() {

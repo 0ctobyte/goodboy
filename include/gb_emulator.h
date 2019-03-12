@@ -15,7 +15,7 @@ public:
     virtual ~gb_emulator();
 
     virtual void go();
-    virtual bool load_rom(const std::string& rom_filename);
+    virtual void load_rom(const std::string& rom_filename);
 
 protected:
     gb_memory_map            m_memory_map;

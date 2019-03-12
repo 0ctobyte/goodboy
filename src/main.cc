@@ -7,6 +7,15 @@ int main(int argc, char **argv) {
 
     if (!options.parse_opts()) return EXIT_FAILURE;
 
+    auto load_rom = [&options](auto& gbm) -> void {
+        try {
+            gbm.load_rom(options.m_rom_filename);
+        } catch (std::runtime_error rerr) {
+            GB_LOGGER(GB_LOG_FATAL) << rerr.what() << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    };
+
     if (options.m_debugger) {
         gb_debugger gbm;
 
@@ -15,21 +24,13 @@ int main(int argc, char **argv) {
         gb_logger::instance().set_stream(std::cout);
         gb_logger::instance().enable_tracing(true);
 
-        if (!gbm.load_rom(options.m_rom_filename)) {
-            GB_LOGGER(GB_LOG_FATAL) << "Not a valid ROM file: " << options.m_rom_filename << std::endl;
-            return EXIT_FAILURE;
-        }
-
+        load_rom(gbm);
         gbm.go();
     } else {
         gb_emulator gbm;
-
         gb_logger::instance().enable_tracing(options.m_tracing);
-        if (!gbm.load_rom(options.m_rom_filename)) {
-            GB_LOGGER(GB_LOG_FATAL) << "Not a valid ROM file: " << options.m_rom_filename << std::endl;
-            return EXIT_FAILURE;
-        }
 
+        load_rom(gbm);
         gbm.go();
     }
 

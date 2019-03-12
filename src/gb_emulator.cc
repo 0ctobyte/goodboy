@@ -1,3 +1,5 @@
+#include <stdexcept>
+#include <sstream>
 #include <fstream>
 
 #include "gb_emulator.h"
@@ -14,10 +16,14 @@ gb_emulator::gb_emulator()
 gb_emulator::~gb_emulator() {
 }
 
-bool gb_emulator::load_rom(const std::string& rom_filename) {
+void gb_emulator::load_rom(const std::string& rom_filename) {
     std::ifstream rom_file (rom_filename, std::ifstream::binary);
 
-    if (!rom_file) return false;
+    if (!rom_file) {
+        std::ostringstream sstr;
+        sstr << "gb_emulator::load_rom() - Invalid ROM file: " << rom_filename;
+        throw std::runtime_error(sstr.str());
+    }
 
     rom_file.seekg(0, rom_file.end);
     int binsize = std::min(static_cast<int>(rom_file.tellg()), 0x10000);
@@ -26,7 +32,7 @@ bool gb_emulator::load_rom(const std::string& rom_filename) {
     // First 32KB of ROM
     gb_rom_ptr rom = std::make_shared<gb_rom>(0x0000, 0x8000);
 
-    rom_file.read(reinterpret_cast<char*>(rom->get_mem()), binsize);
+    rom_file.read(reinterpret_cast<char*>(rom->get_mem()), std::min(0x8000, binsize));
 
     rom_file.close();
 
@@ -65,8 +71,6 @@ bool gb_emulator::load_rom(const std::string& rom_filename) {
     addr_range = high_ram->get_address_range();
     m_memory_map.add_readable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
-
-    return true;
 }
 
 void gb_emulator::go() {
