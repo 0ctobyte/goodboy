@@ -29,12 +29,9 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     int binsize = std::min(static_cast<int>(rom_file.tellg()), 0x10000);
     rom_file.seekg(0, rom_file.beg);
 
-    // First 32KB of ROM
+    // Load first 32KB of ROM with ROM file data
     gb_rom_ptr rom = std::make_shared<gb_rom>(m_memory_manager, 0x0000, 0x8000);
-
     rom_file.read(reinterpret_cast<char*>(rom->get_mem()), std::min(0x8000, binsize));
-
-    rom_file.close();
 
     // Add ROM as readable device but not writeable...of course
     gb_address_range_t addr_range = rom->get_address_range();
