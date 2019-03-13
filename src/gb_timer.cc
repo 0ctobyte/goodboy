@@ -47,7 +47,12 @@ void gb_timer::write_byte(uint16_t addr, uint8_t val) {
         m_timer_start = (val & 0x4);
         m_timer_clk_select = (val & 0x3);
         m_timer_counter = m_timer_clk_select_tbl.at(m_timer_clk_select);
+    } else if (addr == GB_TIMER_DIV_ADDR) {
+        // the DIV register resets to 0 on any write
+        val = 0;
     }
+
+    gb_memory_mapped_device::write_byte(addr, val);
 }
 
 bool gb_timer::update(int cycles) {
