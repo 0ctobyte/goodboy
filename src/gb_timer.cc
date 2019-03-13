@@ -64,18 +64,28 @@ bool gb_timer::update(int cycles) {
     if (!m_timer_start) return false;
 
     // Increment the TIMA (timer counter) register when the timer counter <= 0
-    m_timer_counter = std::max(0, m_timer_counter - cycles);
-    uint8_t tima = gb_memory_mapped_device::read_byte(GB_TIMER_TIMA_ADDR) + 1;
-    if (m_timer_counter == 0) {
-        gb_memory_mapped_device::write_byte(GB_TIMER_TIMA_ADDR, tima);
-        m_timer_counter = m_timer_clk_select_tbl.at(m_timer_clk_select);
+    // Also calculate the cycle offset with which to subtract after reloading the timer counter
+    // This is necessary because at the highest timer clock frequency it's possible for one CPU
+    // instruction to take longer than the number of timer cycles till the next update
+    // ex. If timer_counter = 4 and the timer clock select = 262144 (i.e. 16 clocks per tick)
+    // and the CPU executes LD (nn) instruction which takes 20 CPU clocks.
+    // The timer should increment twice in one update!
+    bool interrupt = false;
+    uint8_t tima = gb_memory_mapped_device::read_byte(GB_TIMER_TIMA_ADDR);
+    for (int diff = cycles, old_timer_counter; diff > 0; diff -= old_timer_counter) {
+        old_timer_counter = m_timer_counter;
+        m_timer_counter = std::max(0, m_timer_counter - diff);
+        if (m_timer_counter == 0) {
+            gb_memory_mapped_device::write_byte(GB_TIMER_TIMA_ADDR, ++tima);
+            m_timer_counter = m_timer_clk_select_tbl.at(m_timer_clk_select);
+        }
+
+        // Check if the TIMA register overflowed, if so raise an interrupt and reload the TIMA register with the value in the TMA register
+        if (tima == 0) {
+            gb_memory_mapped_device::write_byte(GB_TIMER_TIMA_ADDR, gb_memory_mapped_device::read_byte(GB_TIMER_TMA_ADDR));
+            interrupt = true;
+        }
     }
 
-    // Check if the TIMA register overflowed, if so raise an interrupt and reload the TIMA register with the value in the TMA register
-    if (tima == 0) {
-        gb_memory_mapped_device::write_byte(GB_TIMER_TIMA_ADDR, gb_memory_mapped_device::read_byte(GB_TIMER_TMA_ADDR));
-        return true;
-    }
-
-    return false;
+    return interrupt;
 }
