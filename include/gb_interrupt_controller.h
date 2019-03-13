@@ -16,10 +16,20 @@ public:
     void update(int cycles);
 
 private:
+    class gb_interrupt_register : public gb_memory_mapped_device {
+    public:
+        gb_interrupt_register(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size);
+        virtual ~gb_interrupt_register() override;
+
+        virtual void write_byte(uint16_t addr, uint8_t val) override;
+    };
+
+    using gb_interrupt_register_ptr = std::shared_ptr<gb_interrupt_register>;
+
     // The gb_interrupt_flags and gb_interrupt_enable objects contain the memory mapped
     // flags and enable registers
-    gb_memory_mapped_device_ptr          m_iflags;
-    gb_memory_mapped_device_ptr          m_ienable;
+    gb_interrupt_register_ptr            m_iflags;
+    gb_interrupt_register_ptr            m_ienable;
 
     // The interrupt controller needs access to the CPU to send it interrupt sources to handle
     gb_cpu&                              m_cpu;
