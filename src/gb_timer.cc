@@ -38,14 +38,16 @@ gb_timer::~gb_timer() {
 
 void gb_timer::write_byte(uint16_t addr, uint8_t val) {
     if (addr == GB_TIMER_TAC_ADDR) {
-        // val[2] == start timer
-        // val[1:0] == clock select: 00 - 4096 Hz, 01 - 262144 Hz, 10 - 65536 Hz, 11 - 16384 Hz
+        // TAC registers reserved bits are read-as-one
+        // TAC
+        // 7:3 - Reserved RAO
+        // 2   - Timer start
+        // 1:0 - Input clock select: 00 - 4096 Hz, 01 - 262144 Hz, 10 - 65536 Hz, 11 - 16384 Hz
+        val |= 0xf8;
         m_timer_start = (val & 0x4);
-        m_timer_clk_select = val & 0x3;
+        m_timer_clk_select = (val & 0x3);
         m_timer_counter = m_timer_clk_select_tbl.at(m_timer_clk_select);
     }
-
-    gb_memory_mapped_device::write_byte(addr, val);
 }
 
 bool gb_timer::update(int cycles) {
