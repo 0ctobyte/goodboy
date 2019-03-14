@@ -26,6 +26,8 @@ public:
 
     void add_readable_device(const gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size);
     void add_writeable_device(const gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size);
+    void remove_readable_device(uint16_t start_addr, size_t size);
+    void remove_writeable_device(uint16_t start_addr, size_t size);
     uint8_t read_byte(uint16_t addr);
     void write_byte(uint16_t addr, uint8_t val);
 
@@ -46,6 +48,8 @@ private:
 
     template <size_t S>
     void _add_device_to_map(gb_device_map_t<S>& device_map, const gb_memory_mapped_device_ptr& device, uint16_t start_addr, size_t size, size_t bucket_size);
+    template <size_t S>
+    void _remove_device_from_map(gb_device_map_t<S>& device_map, uint16_t start_addr, size_t size, size_t bucket_size);
 };
 
 #endif // GB_MEMORY_MAP_H_

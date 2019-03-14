@@ -1,4 +1,5 @@
 *.o
+*.swp
 *.bin
 *.gb
 gb_emulator
