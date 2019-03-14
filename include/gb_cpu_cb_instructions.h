@@ -78,7 +78,7 @@
 /* 0x43 */ {"BIT 0, E", B4_(_op_print_type0), B0_(_operand_get_register_e), B0_(_operand_get_imm_0), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x44 */ {"BIT 0, H", B4_(_op_print_type0), B0_(_operand_get_register_h), B0_(_operand_get_imm_0), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x45 */ {"BIT 0, L", B4_(_op_print_type0), B0_(_operand_get_register_l), B0_(_operand_get_imm_0), nullptr, B1_(_op_exec_bit), 8, 8},\
-/* 0x46 */ {"BIT 0, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_0), nullptr, B1_(_op_exec_bit), 16, 16},\
+/* 0x46 */ {"BIT 0, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_0), nullptr, B1_(_op_exec_bit), 12, 12},\
 /* 0x47 */ {"BIT 0, A", B4_(_op_print_type0), B0_(_operand_get_register_a), B0_(_operand_get_imm_0), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x48 */ {"BIT 1, B", B4_(_op_print_type0), B0_(_operand_get_register_b), B0_(_operand_get_imm_1), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x49 */ {"BIT 1, C", B4_(_op_print_type0), B0_(_operand_get_register_c), B0_(_operand_get_imm_1), nullptr, B1_(_op_exec_bit), 8, 8},\
@@ -86,7 +86,7 @@
 /* 0x4B */ {"BIT 1, E", B4_(_op_print_type0), B0_(_operand_get_register_e), B0_(_operand_get_imm_1), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x4C */ {"BIT 1, H", B4_(_op_print_type0), B0_(_operand_get_register_h), B0_(_operand_get_imm_1), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x4D */ {"BIT 1, L", B4_(_op_print_type0), B0_(_operand_get_register_l), B0_(_operand_get_imm_1), nullptr, B1_(_op_exec_bit), 8, 8},\
-/* 0x4E */ {"BIT 1, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_1), nullptr, B1_(_op_exec_bit), 16, 16},\
+/* 0x4E */ {"BIT 1, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_1), nullptr, B1_(_op_exec_bit), 12, 12},\
 /* 0x4F */ {"BIT 1, A", B4_(_op_print_type0), B0_(_operand_get_register_a), B0_(_operand_get_imm_1), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x50 */ {"BIT 2, B", B4_(_op_print_type0), B0_(_operand_get_register_b), B0_(_operand_get_imm_2), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x51 */ {"BIT 2, C", B4_(_op_print_type0), B0_(_operand_get_register_c), B0_(_operand_get_imm_2), nullptr, B1_(_op_exec_bit), 8, 8},\
@@ -94,7 +94,7 @@
 /* 0x53 */ {"BIT 2, E", B4_(_op_print_type0), B0_(_operand_get_register_e), B0_(_operand_get_imm_2), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x54 */ {"BIT 2, H", B4_(_op_print_type0), B0_(_operand_get_register_h), B0_(_operand_get_imm_2), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x55 */ {"BIT 2, L", B4_(_op_print_type0), B0_(_operand_get_register_l), B0_(_operand_get_imm_2), nullptr, B1_(_op_exec_bit), 8, 8},\
-/* 0x56 */ {"BIT 2, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_2), nullptr, B1_(_op_exec_bit), 16, 16},\
+/* 0x56 */ {"BIT 2, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_2), nullptr, B1_(_op_exec_bit), 12, 12},\
 /* 0x57 */ {"BIT 2, A", B4_(_op_print_type0), B0_(_operand_get_register_a), B0_(_operand_get_imm_2), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x58 */ {"BIT 3, B", B4_(_op_print_type0), B0_(_operand_get_register_b), B0_(_operand_get_imm_3), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x59 */ {"BIT 3, C", B4_(_op_print_type0), B0_(_operand_get_register_c), B0_(_operand_get_imm_3), nullptr, B1_(_op_exec_bit), 8, 8},\
@@ -102,7 +102,7 @@
 /* 0x5B */ {"BIT 3, E", B4_(_op_print_type0), B0_(_operand_get_register_e), B0_(_operand_get_imm_3), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x5C */ {"BIT 3, H", B4_(_op_print_type0), B0_(_operand_get_register_h), B0_(_operand_get_imm_3), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x5D */ {"BIT 3, L", B4_(_op_print_type0), B0_(_operand_get_register_l), B0_(_operand_get_imm_3), nullptr, B1_(_op_exec_bit), 8, 8},\
-/* 0x5E */ {"BIT 3, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_3), nullptr, B1_(_op_exec_bit), 16, 16},\
+/* 0x5E */ {"BIT 3, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_3), nullptr, B1_(_op_exec_bit), 12, 12},\
 /* 0x5F */ {"BIT 3, A", B4_(_op_print_type0), B0_(_operand_get_register_a), B0_(_operand_get_imm_3), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x60 */ {"BIT 4, B", B4_(_op_print_type0), B0_(_operand_get_register_b), B0_(_operand_get_imm_4), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x61 */ {"BIT 4, C", B4_(_op_print_type0), B0_(_operand_get_register_c), B0_(_operand_get_imm_4), nullptr, B1_(_op_exec_bit), 8, 8},\
@@ -110,7 +110,7 @@
 /* 0x63 */ {"BIT 4, E", B4_(_op_print_type0), B0_(_operand_get_register_e), B0_(_operand_get_imm_4), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x64 */ {"BIT 4, H", B4_(_op_print_type0), B0_(_operand_get_register_h), B0_(_operand_get_imm_4), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x65 */ {"BIT 4, L", B4_(_op_print_type0), B0_(_operand_get_register_l), B0_(_operand_get_imm_4), nullptr, B1_(_op_exec_bit), 8, 8},\
-/* 0x66 */ {"BIT 4, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_4), nullptr, B1_(_op_exec_bit), 16, 16},\
+/* 0x66 */ {"BIT 4, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_4), nullptr, B1_(_op_exec_bit), 12, 12},\
 /* 0x67 */ {"BIT 4, A", B4_(_op_print_type0), B0_(_operand_get_register_a), B0_(_operand_get_imm_4), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x68 */ {"BIT 5, B", B4_(_op_print_type0), B0_(_operand_get_register_b), B0_(_operand_get_imm_5), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x69 */ {"BIT 5, C", B4_(_op_print_type0), B0_(_operand_get_register_c), B0_(_operand_get_imm_5), nullptr, B1_(_op_exec_bit), 8, 8},\
@@ -118,7 +118,7 @@
 /* 0x6B */ {"BIT 5, E", B4_(_op_print_type0), B0_(_operand_get_register_e), B0_(_operand_get_imm_5), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x6C */ {"BIT 5, H", B4_(_op_print_type0), B0_(_operand_get_register_h), B0_(_operand_get_imm_5), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x6D */ {"BIT 5, L", B4_(_op_print_type0), B0_(_operand_get_register_l), B0_(_operand_get_imm_5), nullptr, B1_(_op_exec_bit), 8, 8},\
-/* 0x6E */ {"BIT 5, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_5), nullptr, B1_(_op_exec_bit), 16, 16},\
+/* 0x6E */ {"BIT 5, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_5), nullptr, B1_(_op_exec_bit), 12, 12},\
 /* 0x6F */ {"BIT 5, A", B4_(_op_print_type0), B0_(_operand_get_register_a), B0_(_operand_get_imm_5), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x70 */ {"BIT 6, B", B4_(_op_print_type0), B0_(_operand_get_register_b), B0_(_operand_get_imm_6), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x71 */ {"BIT 6, C", B4_(_op_print_type0), B0_(_operand_get_register_c), B0_(_operand_get_imm_6), nullptr, B1_(_op_exec_bit), 8, 8},\
@@ -126,7 +126,7 @@
 /* 0x73 */ {"BIT 6, E", B4_(_op_print_type0), B0_(_operand_get_register_e), B0_(_operand_get_imm_6), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x74 */ {"BIT 6, H", B4_(_op_print_type0), B0_(_operand_get_register_h), B0_(_operand_get_imm_6), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x75 */ {"BIT 6, L", B4_(_op_print_type0), B0_(_operand_get_register_l), B0_(_operand_get_imm_6), nullptr, B1_(_op_exec_bit), 8, 8},\
-/* 0x76 */ {"BIT 6, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_6), nullptr, B1_(_op_exec_bit), 16, 16},\
+/* 0x76 */ {"BIT 6, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_6), nullptr, B1_(_op_exec_bit), 12, 12},\
 /* 0x77 */ {"BIT 6, A", B4_(_op_print_type0), B0_(_operand_get_register_a), B0_(_operand_get_imm_6), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x78 */ {"BIT 7, B", B4_(_op_print_type0), B0_(_operand_get_register_b), B0_(_operand_get_imm_7), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x79 */ {"BIT 7, C", B4_(_op_print_type0), B0_(_operand_get_register_c), B0_(_operand_get_imm_7), nullptr, B1_(_op_exec_bit), 8, 8},\
@@ -134,7 +134,7 @@
 /* 0x7B */ {"BIT 7, E", B4_(_op_print_type0), B0_(_operand_get_register_e), B0_(_operand_get_imm_7), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x7C */ {"BIT 7, H", B4_(_op_print_type0), B0_(_operand_get_register_h), B0_(_operand_get_imm_7), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x7D */ {"BIT 7, L", B4_(_op_print_type0), B0_(_operand_get_register_l), B0_(_operand_get_imm_7), nullptr, B1_(_op_exec_bit), 8, 8},\
-/* 0x7E */ {"BIT 7, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_7), nullptr, B1_(_op_exec_bit), 16, 16},\
+/* 0x7E */ {"BIT 7, (HL)", B4_(_op_print_type0), B0_(_operand_get_mem_hl), B0_(_operand_get_imm_7), nullptr, B1_(_op_exec_bit), 12, 12},\
 /* 0x7F */ {"BIT 7, A", B4_(_op_print_type0), B0_(_operand_get_register_a), B0_(_operand_get_imm_7), nullptr, B1_(_op_exec_bit), 8, 8},\
 /* 0x80 */ {"RES 0, B", B4_(_op_print_type0), B0_(_operand_get_register_b), B0_(_operand_get_imm_0), B2_(_operand_set_register_b), B1_(_op_exec_res), 8, 8},\
 /* 0x81 */ {"RES 0, C", B4_(_op_print_type0), B0_(_operand_get_register_c), B0_(_operand_get_imm_0), B2_(_operand_set_register_c), B1_(_op_exec_res), 8, 8},\
