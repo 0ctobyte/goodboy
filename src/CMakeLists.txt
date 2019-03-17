@@ -4,13 +4,17 @@ target_sources(gb_emulator
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_debugger
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator_opts
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_framebuffer
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_interrupt_controller
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_interrupt_source
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_lcd
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_logger
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_memory_manager
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_memory_map
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_memory_mapped_device
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_ppu
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_ram
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_rom
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_serial_io
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_timer

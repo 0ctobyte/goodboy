@@ -7,9 +7,16 @@
 #include "gb_ram.h"
 #include "gb_serial_io.h"
 #include "gb_timer.h"
+#include "gb_lcd.h"
+#include "gb_ppu.h"
+
+#define GB_RENDERER_WIDTH  (GB_WIDTH*5)
+#define GB_RENDERER_HEIGHT (GB_HEIGHT*5)
+
+#define GB_LCDC_ADDR       (0xFF40)
 
 gb_emulator::gb_emulator()
-    : m_memory_manager(), m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_manager, m_memory_map, m_cpu), m_cycles(0)
+    : m_renderer(GB_RENDERER_WIDTH, GB_RENDERER_HEIGHT), m_memory_manager(), m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_manager, m_memory_map, m_cpu), m_cycles(0)
 {
 }
 
@@ -68,12 +75,35 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     addr_range = high_ram->get_address_range();
     m_memory_map.add_readable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
+
+    // Add the LCD controller and it's registers
+    gb_lcd_ptr lcd = std::make_shared<gb_lcd>(m_memory_manager, m_memory_map);
+    addr_range = lcd->get_address_range();
+    m_memory_map.add_readable_device(lcd, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_memory_map.add_writeable_device(lcd, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_interrupt_controller.add_interrupt_source(lcd);
+
+    // Add the Pixel Processing Unit and it's registers
+    gb_ppu_ptr ppu = std::make_shared<gb_ppu>(m_memory_manager, m_memory_map, m_renderer.get_framebuffer());
+    addr_range = ppu->get_address_range();
+    m_memory_map.add_readable_device(ppu, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_memory_map.add_writeable_device(ppu, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_interrupt_controller.add_interrupt_source(ppu);
 }
 
-void gb_emulator::go() {
-    while (1) {
+void gb_emulator::step(const int num_cycles) {
+    int step_cycles = 0;
+    while (step_cycles < num_cycles) {
         int cycles = m_cpu.step();
         m_cycles += static_cast<uint64_t>(cycles);
         m_interrupt_controller.update(cycles);
+        step_cycles += cycles;
+    }
+}
+
+void gb_emulator::go() {
+    while (m_renderer.is_open()) {
+        step(70224);
+        m_renderer.update(((m_memory_map.read_byte(GB_LCDC_ADDR) & 0x80) != 0));
     }
 }

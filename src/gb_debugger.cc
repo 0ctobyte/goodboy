@@ -57,8 +57,8 @@ ncurses_stream::~ncurses_stream() {
     {KEY_DOWN, std::bind(&gb_debugger::_debugger_scroll_dn_one_line, this)}\
 }\
 
-gb_debugger::gb_debugger()
-    : gb_emulator(), m_key_map(KEY_MAP_INIT), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
+gb_debugger::gb_debugger(gb_emulator& emulator)
+    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
 {
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
@@ -103,14 +103,12 @@ void gb_debugger::go() {
 }
 
 void gb_debugger::_debugger_step_once() {
-    int cycles = m_cpu.step();
-    m_cycles += static_cast<uint64_t>(cycles);
-    m_interrupt_controller.update(cycles);
+    m_emulator.step(1);
     m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
 }
 
 void gb_debugger::_debugger_dump_registers() {
-    m_cpu.dump_registers();
+    m_emulator.m_cpu.dump_registers();
     m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
 }
 

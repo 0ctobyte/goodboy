@@ -10,26 +10,27 @@
 
 class ncurses_stream;
 
-class gb_debugger : public gb_emulator {
+class gb_debugger {
 public:
-    gb_debugger();
-    virtual ~gb_debugger() override;
+    gb_debugger(gb_emulator& emulator);
+    ~gb_debugger();
 
-    virtual void go() override;
+    void go();
 
 private:
     using key_handler_t      = std::function<void()>;
     using key_map_t          = std::unordered_map<int, key_handler_t>;
     using ncurses_stream_ptr = std::unique_ptr<ncurses_stream>;
 
-    const key_map_t              m_key_map;
-    ncurses_stream_ptr           m_nstream;
-    WINDOW*                      m_nwin;
-    int                          m_nwin_pos;
-    int                          m_nwin_max_lines;
-    int                          m_nwin_lines;
-    int                          m_nwin_cols;
-    bool                         m_continue;
+    gb_emulator&        m_emulator;
+    const key_map_t     m_key_map;
+    ncurses_stream_ptr  m_nstream;
+    WINDOW*             m_nwin;
+    int                 m_nwin_pos;
+    int                 m_nwin_max_lines;
+    int                 m_nwin_lines;
+    int                 m_nwin_cols;
+    bool                m_continue;
 
     void _debugger_step_once();
     void _debugger_dump_registers();

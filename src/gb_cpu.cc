@@ -28,7 +28,7 @@ gb_cpu::gb_cpu(gb_memory_map& memory_map)
     m_registers.de = 0x00d8;
     m_registers.hl = 0x014d;
     m_registers.sp = 0xfffe;
-    m_registers.pc = 0x0100;
+    m_registers.pc = 0x0000;
 }
 
 gb_cpu::~gb_cpu() {

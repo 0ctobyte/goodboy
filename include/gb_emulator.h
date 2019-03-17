@@ -8,16 +8,20 @@
 #include "gb_memory_map.h"
 #include "gb_interrupt_controller.h"
 #include "gb_cpu.h"
+#include "gb_renderer.h"
 
 class gb_emulator {
+friend class gb_debugger;
 public:
     gb_emulator();
-    virtual ~gb_emulator();
+    ~gb_emulator();
 
-    virtual void go();
-    virtual void load_rom(const std::string& rom_filename);
+    void load_rom(const std::string& rom_filename);
+    void step(int num_cycles);
+    void go();
 
 protected:
+    gb_renderer              m_renderer;
     gb_memory_manager        m_memory_manager;
     gb_memory_map            m_memory_map;
     gb_cpu                   m_cpu;
