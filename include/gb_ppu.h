@@ -33,6 +33,8 @@ private:
 
     // Previous scanline
     int                         m_next_line;
+
+    void _draw_background(uint8_t ly);
 };
 
 using gb_ppu_ptr = std::shared_ptr<gb_ppu>;

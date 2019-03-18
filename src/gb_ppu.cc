@@ -1,4 +1,5 @@
 #include "gb_ppu.h"
+#include "gb_logger.h"
 
 #define GB_VIDEO_RAM_ADDR (0x8000)
 #define GB_VIDEO_RAM_SIZE (0x2000)
@@ -44,50 +45,96 @@ gb_ppu::gb_ppu(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_
 gb_ppu::~gb_ppu() {
 }
 
-#include "gb_logger.h"
-bool gb_ppu::update(int cycles) {
-    bool interrupt = false;
+void gb_ppu::_draw_background(uint8_t ly) {
     uint8_t lcdc = m_memory_map.read_byte(GB_LCDC_ADDR);
-    uint8_t ly = m_memory_map.read_byte(GB_LCD_LY_ADDR);
     uint8_t scx = m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_X_ADDR);
     uint8_t scy = m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_Y_ADDR);
 
-    // Assert the V-blank interrupt
-    if (ly == 144 && m_next_line == ly) {
-        interrupt = true;
-    }
+    uint16_t background_tile_map_addr = (lcdc & 0x8) ? 0x9c00 : 0x9800;
+    uint16_t background_tile_data_sel_addr = (lcdc & 0x10) ? 0x8000 : 0x9000;
 
-    if (m_next_line == ly && ly < 144) {
-        // Draw the next scan line
-        // 160 pixels in each scanline
-        for (uint8_t lx = 0; lx < 160; lx++) {
-            GB_LOGGER(GB_LOG_INFO) << "scx: " << std::dec << static_cast<unsigned>(scx) << " scy: " << std::dec << static_cast<unsigned>(scy) << " lcdc: " << std::hex << static_cast<uint16_t>(lcdc) << std::endl;
-            GB_LOGGER(GB_LOG_INFO) << "lx: " << std::dec << static_cast<unsigned>(lx) << " ly: " << std::dec << static_cast<unsigned>(ly) << std::endl;
-            uint8_t rx = (scx + lx) & 0xff;
-            uint8_t ry = (scy + ly) & 0xff;
-            uint8_t tx = rx >> 3;
-            uint8_t ty = ry >> 3;
-            uint16_t bgt = (lcdc & 0x8) ? 0x9C00 : 0x9800;
-            GB_LOGGER(GB_LOG_INFO) << "rx: " << std::dec << static_cast<unsigned>(rx) << " ry: " << std::dec << static_cast<unsigned>(ry) << std::endl;
-            GB_LOGGER(GB_LOG_INFO) << "tx: " << std::dec << static_cast<unsigned>(tx) << " ty: " << std::dec << static_cast<unsigned>(ty) << std::endl;
-            GB_LOGGER(GB_LOG_INFO) << "bgt: " << std::hex << bgt << " tile_num_addr: " << std::hex << (bgt + ((ty * 32) + tx)) << std::endl;
-            uint8_t tile_num = this->read_byte(bgt + ((ty * 32) + tx));
-            int bgtds = (lcdc & 0x10) ? 0x8000 : 0x9000;
-            uint16_t tile_data = static_cast<uint16_t>((lcdc & 0x10) ? static_cast<unsigned>(bgtds) + (tile_num * 16) : static_cast<unsigned>(bgtds + (static_cast<int8_t>(tile_num) * 16)));
-            GB_LOGGER(GB_LOG_INFO) << "tile_num: " << std::hex << static_cast<int>(tile_num) << " bgtds: " << std::hex << bgtds << " tile_data: " << std::hex << tile_data << std::endl;
-            uint8_t tpx = rx & 0x7;
-            uint8_t tpy = ry & 0x7;
-            GB_LOGGER(GB_LOG_INFO) << "tpx: " << std::dec << static_cast<int>(tpx) << " tpy: " << std::dec << static_cast<int>(tpy) << std::endl;
-            GB_LOGGER(GB_LOG_INFO) << "tdblo_addr: " << std::hex << (tile_data + (tpy * 2)) << " tdbhi_addr: " << std::hex << (tile_data + ((tpy * 2) + 1)) << std::endl;
-            uint8_t tile_line_lo = this->read_byte(tile_data + (tpy * 2));
-            uint8_t tile_line_hi = this->read_byte(tile_data + ((tpy * 2) + 1));
-            uint8_t col_idx = static_cast<uint8_t>(((tile_line_lo >> (7-tpx)) & 0x1) | (((tile_line_hi >> (7-tpx)) & 0x1) << 1));
-            uint8_t bg_colour = (m_ppu_palette->read_byte(GB_PPU_BGP_ADDR) >> (col_idx * 2)) & 0x3;
-            GB_LOGGER(GB_LOG_INFO) << "tile_line_lo: " << std::hex << static_cast<int>(tile_line_lo) << " tile_line_hi: " << std::hex << static_cast<int>(tile_line_hi) << std::endl;
-            GB_LOGGER(GB_LOG_INFO) << " col_idx: " << static_cast<int>(col_idx) << " bg_colour: " << static_cast<int>(bg_colour) << std::endl;
-            m_framebuffer.set_pixel(lx, ly, static_cast<gb_colour_t>(bg_colour));
-        }
+    uint8_t pixel_y = (scy + ly) & 0xff;
+    uint8_t tile_y = pixel_y >> 3;
+    uint8_t tile_pixel_y_offset = (pixel_y & 0x7) * 2;
+
+    // The background tile map makes up 256x256 pixels (only 160x144 are shown on the screen depending on SCX and SCY)
+    // The background tile map is laid out as 32x32 tiles. Each byte refers to a tile number.
+    // First convert the pixel x & y coordinates to tile coordinates tx, ty
+    // The background tile map start either at 0x9c00 or 0x9800 depending on LCDC[3]
+    auto get_tile_num = [this](uint16_t bgtm, uint8_t tx, uint8_t ty) -> uint8_t {
+        return this->read_byte(bgtm + ((ty * 32) + tx));
+    };
+
+    // The tile number is used to index into the background tile data select array
+    // There's two of them, but one of the used at a time depending on LCDC[4]
+    // Starting at 0x8000, the tile number is used as an unsigned index between 0-255
+    // Starting at 0x9000, the tile number is used as a signed index between -127-127
+    // Each tile is 8x8 pixels, composed of 16 bytes, 2 bytes per line of 8 pixels.
+    auto get_tile_data_addr = [lcdc](uint16_t bgtds, uint8_t tile_num) -> uint16_t {
+        if (lcdc & 0x10) return (bgtds + (tile_num * 16));
+        else return static_cast<uint16_t>(static_cast<int>(bgtds) + (static_cast<int8_t>(tile_num) * 16));
+    };
+
+    // A tiles pixel colour is composed of two bits, one from the upper byte and the other from the lower byte of the line
+    // Suppos if tile# == 0, the 16 bytes of the tile 0 data may look something like this:
+    // 0x8000: 01101001
+    // 0x8001: 10010110
+    // 0x8002: 01101001
+    // 0x8003: 10010110
+    // 0x8004: 01101001
+    // 0x8005: 10010110
+    // 0x8006: 01101001
+    // 0x8007: 10010110
+    // 0x8008: 01101001
+    // 0x8009: 10010110
+    // 0x800a: 01101001
+    // 0x800b: 10010110
+    // 0x800c: 01101001
+    // 0x800d: 10010110
+    // 0x800e: 01101001
+    // 0x800f: 10010110
+    // Then pixel data for line 0 of the tile:
+    // X pixel: 7 6 5 4 3 2 1 0
+    // ------------------------
+    // 0x8000:  0 1 1 0 1 0 0 1
+    // 0x8001:  1 0 0 1 0 1 1 0
+    // ------------------------
+    // Colour information:
+    // pixel[0] = 10
+    // pixel[1] = 01
+    // pixel[2] = 01
+    // pixel[3] = 10
+    // pixel[4] = 01
+    // pixel[5] = 10
+    // pixel[6] = 10
+    // pixel[7] = 01
+    auto get_tile_pixel_colour = [this, tile_pixel_y_offset](uint16_t tile_data_addr, uint8_t tile_pixel_x) -> uint8_t {
+        uint8_t tile_line_lo = this->read_byte(tile_data_addr + tile_pixel_y_offset);
+        uint8_t tile_line_hi = this->read_byte(tile_data_addr + tile_pixel_y_offset+ 1);
+        uint8_t col_idx = static_cast<uint8_t>(((tile_line_lo >> (7-tile_pixel_x)) & 0x1) | (((tile_line_hi >> (7-tile_pixel_x)) & 0x1) << 1));
+        return ((this->m_ppu_palette->read_byte(GB_PPU_BGP_ADDR) >> (col_idx * 2)) & 0x3);
+    };
+
+    for (uint8_t lx = 0; lx < 160; lx++) {
+        uint8_t pixel_x = (scx + lx) & 0xff;
+        uint8_t tile_x = pixel_x >> 3;
+        uint8_t tile_pixel_x = pixel_x & 0x7;
+
+        uint16_t tile_data_addr = get_tile_data_addr(background_tile_data_sel_addr, get_tile_num(background_tile_map_addr, tile_x, tile_y));
+
+        m_framebuffer.set_pixel(lx, ly, static_cast<gb_colour_t>(get_tile_pixel_colour(tile_data_addr, tile_pixel_x)));
     }
+}
+
+bool gb_ppu::update(int cycles) {
+    bool interrupt = false;
+    uint8_t ly = m_memory_map.read_byte(GB_LCD_LY_ADDR);
+
+    // Assert the V-blank interrupt
+    if (ly == 144 && m_next_line == ly) interrupt = true;
+
+    // Draw the next scan line of the background; 160 pixels per scanline
+    if (m_next_line == ly && ly < 144) _draw_background(ly);
 
     // Update next scan line
     m_next_line = ly + 1;
