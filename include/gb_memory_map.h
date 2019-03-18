@@ -28,12 +28,15 @@ public:
     void add_writeable_device(const gb_memory_mapped_device_ptr device, uint16_t start_addr, size_t size);
     void remove_readable_device(uint16_t start_addr, size_t size);
     void remove_writeable_device(uint16_t start_addr, size_t size);
+    gb_memory_mapped_device_ptr get_readable_device(uint16_t addr);
+    gb_memory_mapped_device_ptr get_writeable_device(uint16_t addr);
     uint8_t read_byte(uint16_t addr);
     void write_byte(uint16_t addr, uint8_t val);
 
 private:
-   template <size_t S>
-    using gb_device_map_t = std::array<gb_memory_mapped_device_ptr, S>;
+    template <size_t S>
+    using gb_device_map_t     = std::array<gb_memory_mapped_device_ptr, S>;
+    using gb_device_address_t = std::tuple<gb_memory_mapped_device_ptr, uint16_t>;
 
     // Memory is split into LOMEM (0000 - E000) and HIMEM (FE00 - 10000)
     // This way we can split up the granularity of region sizes for each hash table
@@ -50,6 +53,8 @@ private:
     void _add_device_to_map(gb_device_map_t<S>& device_map, const gb_memory_mapped_device_ptr& device, uint16_t start_addr, size_t size, size_t bucket_size);
     template <size_t S>
     void _remove_device_from_map(gb_device_map_t<S>& device_map, uint16_t start_addr, size_t size, size_t bucket_size);
+    template <size_t S1, size_t S2>
+    gb_device_address_t _get_device_from_map(gb_device_map_t<S1>& lomem_device_map, gb_device_map_t<S2>& himem_device_map, uint16_t addr);
 };
 
 #endif // GB_MEMORY_MAP_H_

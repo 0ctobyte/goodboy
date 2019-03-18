@@ -15,6 +15,7 @@ public:
 
     void dump_registers() const;
     uint16_t get_pc() const;
+    void set_pc(uint16_t pc);
     int step();
     bool handle_interrupt(uint16_t jump_address);
 

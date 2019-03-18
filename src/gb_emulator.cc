@@ -7,6 +7,7 @@
 #include "gb_ram.h"
 #include "gb_serial_io.h"
 #include "gb_timer.h"
+#include "gb_joypad.h"
 #include "gb_lcd.h"
 #include "gb_ppu.h"
 
@@ -21,6 +22,38 @@ gb_emulator::gb_emulator()
 }
 
 gb_emulator::~gb_emulator() {
+}
+
+bool gb_emulator::_run_bootrom() {
+    std::ifstream dmg_file ("DMG_ROM.bin", std::ifstream::binary);
+
+    // If DMG_ROM.bin doesn't exist in the current directory then just skip it
+    if (!dmg_file) return false;
+
+    dmg_file.seekg(0, dmg_file.end);
+    int size = std::min(static_cast<int>(dmg_file.tellg()), 0x100);
+    dmg_file.seekg(0, dmg_file.beg);
+
+    // Get the previous ROM entry
+    gb_memory_mapped_device_ptr game_rom = m_memory_map.get_readable_device(0x0);
+
+    // Save the first 256 where the bootrom will go
+    std::vector<uint8_t> temp (0x100, 0);
+    memcpy(temp.data(), game_rom->get_mem(), 0x100);
+
+    // Load the DMG bootrom
+    dmg_file.read(reinterpret_cast<char*>(game_rom->get_mem()), size);
+
+    // Run the bootrom
+    while (m_cpu.get_pc() < 0x100 && m_renderer.is_open()) {
+        step(70224);
+        m_renderer.update(((m_memory_map.read_byte(GB_LCDC_ADDR) & 0x80) != 0));
+    }
+
+    // Restore the game ROM
+    memcpy(game_rom->get_mem(), temp.data(), 0x100);
+
+    return true;
 }
 
 void gb_emulator::load_rom(const std::string& rom_filename) {
@@ -70,6 +103,13 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     m_memory_map.add_writeable_device(timer, std::get<0>(addr_range), std::get<1>(addr_range));
     m_interrupt_controller.add_interrupt_source(timer);
 
+    // Add Joypad
+    gb_joypad_ptr joypad = std::make_shared<gb_joypad>(m_memory_manager);
+    addr_range = joypad->get_address_range();
+    m_memory_map.add_readable_device(joypad, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_memory_map.add_writeable_device(joypad, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_interrupt_controller.add_interrupt_source(joypad);
+
     // Add 128 bytes of high RAM (used for stack and temp variables)
     gb_ram_ptr high_ram = std::make_shared<gb_ram>(m_memory_manager, 0xFF80, 0x7F);
     addr_range = high_ram->get_address_range();
@@ -102,6 +142,9 @@ void gb_emulator::step(const int num_cycles) {
 }
 
 void gb_emulator::go() {
+    // Run DMG bootrom if available, otherwise skip to PC=0x0100
+    if (!_run_bootrom()) m_cpu.set_pc(0x0100);
+
     while (m_renderer.is_open()) {
         step(70224);
         m_renderer.update(((m_memory_map.read_byte(GB_LCDC_ADDR) & 0x80) != 0));

@@ -27,6 +27,8 @@ protected:
     gb_cpu                   m_cpu;
     gb_interrupt_controller  m_interrupt_controller;
     uint64_t                 m_cycles;
+
+    bool _run_bootrom();
 };
 
 #endif // GB_EMULATOR_H_

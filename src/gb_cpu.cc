@@ -47,6 +47,10 @@ uint16_t gb_cpu::get_pc() const {
     return m_registers.pc;
 }
 
+void gb_cpu::set_pc(uint16_t pc) {
+    m_registers.pc = pc;
+}
+
 bool gb_cpu::handle_interrupt(uint16_t jump_address) {
     // Always break out of halted mode if an interrupt occurs
     m_halted = false;
