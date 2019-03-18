@@ -119,10 +119,12 @@ void gb_ppu::_draw_background(uint8_t ly) {
         uint8_t pixel_x = (scx + lx) & 0xff;
         uint8_t tile_x = pixel_x >> 3;
         uint8_t tile_pixel_x = pixel_x & 0x7;
-
         uint16_t tile_data_addr = get_tile_data_addr(background_tile_data_sel_addr, get_tile_num(background_tile_map_addr, tile_x, tile_y));
 
-        m_framebuffer.set_pixel(lx, ly, static_cast<gb_colour_t>(get_tile_pixel_colour(tile_data_addr, tile_pixel_x)));
+        // If the background is turned off (LCDC[0]) just draw white
+        uint8_t colour = (lcdc & 0x1) ? get_tile_pixel_colour(tile_data_addr, tile_pixel_x) : 0;
+
+        m_framebuffer.set_pixel(lx, ly, static_cast<gb_colour_t>(colour));
     }
 }
 
