@@ -17,7 +17,7 @@
 #define GB_LCDC_ADDR       (0xFF40)
 
 gb_emulator::gb_emulator()
-    : m_renderer(GB_RENDERER_WIDTH, GB_RENDERER_HEIGHT), m_memory_manager(), m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_manager, m_memory_map, m_cpu), m_cycles(0)
+    : m_renderer(GB_RENDERER_WIDTH, GB_RENDERER_HEIGHT), m_memory_manager(), m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_manager, m_memory_map, m_cpu), m_dma(), m_cycles(0)
 {
 }
 
@@ -129,6 +129,12 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     m_memory_map.add_readable_device(ppu, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(ppu, std::get<0>(addr_range), std::get<1>(addr_range));
     m_interrupt_controller.add_interrupt_source(ppu);
+
+    // Add the DMA
+    m_dma = std::make_shared<gb_dma>(m_memory_manager, m_memory_map);
+    addr_range = m_dma->get_address_range();
+    m_memory_map.add_readable_device(m_dma, std::get<0>(addr_range), std::get<1>(addr_range));
+    m_memory_map.add_writeable_device(m_dma, std::get<0>(addr_range), std::get<1>(addr_range));
 }
 
 void gb_emulator::step(const int num_cycles) {
@@ -137,6 +143,7 @@ void gb_emulator::step(const int num_cycles) {
         int cycles = m_cpu.step();
         m_cycles += static_cast<uint64_t>(cycles);
         m_interrupt_controller.update(cycles);
+        m_dma->update(cycles);
         step_cycles += cycles;
     }
 }

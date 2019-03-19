@@ -25,6 +25,10 @@ private:
     gb_memory_mapped_device_ptr m_ppu_palette;
     gb_memory_mapped_device_ptr m_ppu_win_scroll;
 
+    // OAM - Object Attribute Memory used for sprites
+    // This memory stores sprite information for 40 sprites
+    gb_memory_mapped_device_ptr m_ppu_oam;
+
     // Need a reference to the memory map to access LCD registers
     gb_memory_map&              m_memory_map;
 
@@ -35,6 +39,7 @@ private:
     int                         m_next_line;
 
     void _draw_background(uint8_t ly);
+    void _draw_sprites(uint8_t ly);
 };
 
 using gb_ppu_ptr = std::shared_ptr<gb_ppu>;

@@ -9,6 +9,7 @@ gb_renderer::gb_renderer(unsigned int width, unsigned int height)
     sf::Vector2f window_size (m_window.getSize());
     m_framebuffer.create(GB_WIDTH, GB_HEIGHT);
     m_sprite.setScale(window_size.x / static_cast<float>(GB_WIDTH), window_size.y / static_cast<float>(GB_HEIGHT));
+    m_window.setFramerateLimit(60);
     m_window.setVerticalSyncEnabled(true);
     m_window.setKeyRepeatEnabled(false);
     m_window.display();

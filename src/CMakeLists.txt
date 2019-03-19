@@ -3,6 +3,7 @@ target_sources(gb_emulator
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_cpu
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_debugger
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_dma
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator_opts
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_framebuffer
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_interrupt_controller

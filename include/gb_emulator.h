@@ -9,6 +9,7 @@
 #include "gb_interrupt_controller.h"
 #include "gb_cpu.h"
 #include "gb_renderer.h"
+#include "gb_dma.h"
 
 class gb_emulator {
 friend class gb_debugger;
@@ -26,6 +27,7 @@ protected:
     gb_memory_map            m_memory_map;
     gb_cpu                   m_cpu;
     gb_interrupt_controller  m_interrupt_controller;
+    gb_dma_ptr               m_dma;
     uint64_t                 m_cycles;
 
     bool _run_bootrom();
