@@ -27,7 +27,7 @@ struct gb_ppu_sprite_t {
     uint8_t  y;
     uint8_t  x;
     uint8_t  tile_num;
-    bool     bg_prority;
+    bool     bg_priority;
     bool     flip_y;
     bool     flip_x;
     bool     use_obp1;
@@ -64,7 +64,7 @@ gb_ppu::gb_ppu(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_
 gb_ppu::~gb_ppu() {
 }
 
-void gb_ppu::_draw_background(uint8_t ly) {
+void gb_ppu::_draw_background(uint8_t ly, gb_ppu_scanline_colours_t& bg_colour_indices) {
     uint8_t lcdc = m_memory_map.read_byte(GB_LCDC_ADDR);
     uint8_t scx = m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_X_ADDR);
     uint8_t scy = m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_Y_ADDR);
@@ -128,11 +128,10 @@ void gb_ppu::_draw_background(uint8_t ly) {
     // pixel[5] = 10
     // pixel[6] = 10
     // pixel[7] = 01
-    auto get_tile_pixel_colour = [this, tile_pixel_y_offset, background_palette](uint16_t tile_data_addr, uint8_t tile_pixel_x) -> uint8_t {
+    auto get_tile_pixel_colour_idx = [this, tile_pixel_y_offset](uint16_t tile_data_addr, uint8_t tile_pixel_x) -> uint8_t {
         uint8_t tile_line_lo = this->read_byte(tile_data_addr + tile_pixel_y_offset);
         uint8_t tile_line_hi = this->read_byte(tile_data_addr + tile_pixel_y_offset+ 1);
-        uint8_t col_idx = static_cast<uint8_t>(((tile_line_lo >> (7-tile_pixel_x)) & 0x1) | (((tile_line_hi >> (7-tile_pixel_x)) & 0x1) << 1));
-        return ((background_palette >> (col_idx * 2)) & 0x3);
+        return static_cast<uint8_t>(((tile_line_lo >> (7-tile_pixel_x)) & 0x1) | (((tile_line_hi >> (7-tile_pixel_x)) & 0x1) << 1));
     };
 
     for (uint8_t lx = 0; lx < 160; lx++) {
@@ -141,15 +140,20 @@ void gb_ppu::_draw_background(uint8_t ly) {
         uint8_t tile_pixel_x = pixel_x & 0x7;
         uint16_t tile_data_addr = get_tile_data_addr(background_tile_data_sel_addr, get_tile_num(background_tile_map_addr, tile_x, tile_y));
 
+        // Get the colour index and put it in the background colour index array
+        // This will be used by the sprite rendering logic to determine background priority
+        uint8_t col_idx = get_tile_pixel_colour_idx(tile_data_addr, tile_pixel_x);
+        bg_colour_indices.at(lx) = (lcdc & 0x1) ? col_idx : 0;
+
         // If the background is turned off (LCDC[0]) just draw white
-        uint8_t colour = (lcdc & 0x1) ? get_tile_pixel_colour(tile_data_addr, tile_pixel_x) : 0;
+        gb_colour_t colour = (lcdc & 0x1) ? static_cast<gb_colour_t>((background_palette >> (col_idx * 2)) & 0x3) : GB_COLOUR0;
 
         // Draw the pixel into the framebuffer
-        m_framebuffer.set_pixel(lx, ly, static_cast<gb_colour_t>(colour));
+        m_framebuffer.set_pixel(lx, ly, colour);
     }
 }
 
-void gb_ppu::_draw_sprites(uint8_t ly) {
+void gb_ppu::_draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colour_indices) {
     uint8_t lcdc = m_memory_map.read_byte(GB_LCDC_ADDR);
 
     // Don't draw sprites if LCDC[1] == 0
@@ -157,8 +161,8 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
 
     // Sprites can either 8x8 pixels or 8x16 pixels depending on LCDC[2]
     bool double_size = (lcdc & 0x4) ? true : false;
-    uint8_t sprite_size = (lcdc & 4) ? 16 : 8;
-    uint16_t sprite_tile_data_addr = 0x8000;
+    uint8_t sprite_size = double_size ? 16 : 8;
+    uint16_t sprite_tile_data_addr = GB_VIDEO_RAM_ADDR;
     uint8_t obp0 = m_ppu_palette->read_byte(GB_PPU_OBP0_ADDR);
     uint8_t obp1 = m_ppu_palette->read_byte(GB_PPU_OBP1_ADDR);
 
@@ -208,15 +212,17 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
     // - In case of same x, sprites take precedence according to OAM table ordering: A.x == B.x && A.entry_num < B.entry_num
     std::sort(visible_sprites.begin(), visible_sprites.end(),
         [](const gb_ppu_sprite_t& a, const gb_ppu_sprite_t& b) -> bool {
-            return ((a.x != b.x && a.x > b.x) || (a.x == b.x && a.entry_num > b.entry_num));
+            return (a.x > b.x || (a.x == b.x && a.entry_num > b.entry_num));
     });
 
     // Now go through each visible sprite and draw the part of the scanline it's visible in
     for (gb_ppu_sprite_t& sprite : visible_sprites) {
+        GB_LOGGER(GB_LOG_FATAL) << "s.x: " << std::dec << static_cast<uint16_t>(sprite.x) << " s.y: " << std::dec << static_cast<uint16_t>(sprite.y) << std::endl;
         // Get the pointer to the Sprite tile data
         // Then calculate the offset to the 2 bytes for the current scanline (depending on flip_y)
+        uint8_t y = ly - sprite.y;
         uint16_t sprite_addr = sprite_tile_data_addr + (sprite.tile_num * 16);
-        uint8_t line_offset = (sprite.flip_y ? (sprite_size - 1) - (ly - sprite.y) : ly - sprite.y) * 2;
+        uint8_t line_offset = (sprite.flip_y ? (sprite_size - 1) - y : y) * 2;
 
         // Read the pixel data for the line
         uint8_t sprite_line_lo = this->read_byte(sprite_addr + line_offset);
@@ -225,14 +231,23 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
         // Which palette is this sprite using?
         uint8_t obj_palette = sprite.use_obp1 ? obp1 : obp0;
 
-        for (uint8_t lx = sprite.x; lx < (sprite.x + 8); lx++) {
+        for (unsigned int lx = sprite.x; lx < (sprite.x + 8); lx++) {
             // Get colour index from the tile line; works the same way as the background tile data
-            uint8_t x = lx & 0x7;
-            uint8_t colour_idx = static_cast<uint8_t>(((sprite_line_lo >> (7-x)) & 0x1) | (((sprite_line_hi >> (7-x)) & 0x1) << 1));
-            uint8_t colour = (obj_palette >> (colour_idx * 2)) & 0x3;
+            uint8_t x = sprite.flip_x ? (lx & 0x7) : 7 - (lx & 0x7);
+            uint8_t colour_idx = static_cast<uint8_t>(((sprite_line_lo >> x) & 0x1) | (((sprite_line_hi >> x) & 0x1) << 1));
+
+            // For sprites, a colour index of 0 in the tile data means transparent. Don't even draw it.
+            if (colour_idx == 0) continue;
+
+            // Get the colour from the object palette
+            gb_colour_t colour = static_cast<gb_colour_t>((obj_palette >> (colour_idx * 2)) & 0x3);
+
+            // If BG priority is enabled then don't draw the pixel if the current background pixel colour is not colour 0
+            // The background has priority for all other colours except colour 0 in which case the sprite pixel can be drawn
+            if (sprite.bg_priority && bg_colour_indices.at(lx) != 0) continue;
 
             // Draw the pixel into the framebuffer
-            m_framebuffer.set_pixel(lx, ly, static_cast<gb_colour_t>(colour));
+            m_framebuffer.set_pixel(lx, ly, colour);
         }
     }
 }
@@ -247,8 +262,9 @@ bool gb_ppu::update(int cycles) {
     // Draw the next scan line of the background; 160 pixels per scanline
     // Draw the window & finally draw the sprites
     if (m_next_line == ly && ly < 144) {
-        _draw_background(ly);
-        _draw_sprites(ly);
+        gb_ppu_scanline_colours_t bg_colour_indices;
+        _draw_background(ly, bg_colour_indices);
+        _draw_sprites(ly, bg_colour_indices);
     }
 
     // Update next scan line

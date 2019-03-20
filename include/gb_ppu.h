@@ -1,6 +1,8 @@
 #ifndef GB_PPU_H_
 #define GB_PPU_H_
 
+#include <array>
+
 #include "gb_memory_map.h"
 #include "gb_interrupt_source.h"
 #include "gb_framebuffer.h"
@@ -13,6 +15,8 @@ public:
     virtual bool update(int cycles) override;
 
 private:
+    using gb_ppu_scanline_colours_t = std::array<uint8_t, 160>;
+
     // Registers used by the PPU
     // bg_scroll - SCY: BG Y Position SCX: BG X Position
     // palette - BGP: Background & Window Palette Data OBP0: Object Palette 0 OBP1: Object Palette 1
@@ -38,8 +42,8 @@ private:
     // Previous scanline
     int                         m_next_line;
 
-    void _draw_background(uint8_t ly);
-    void _draw_sprites(uint8_t ly);
+    void _draw_background(uint8_t ly, gb_ppu_scanline_colours_t& bg_colour_indices);
+    void _draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colour_indices);
 };
 
 using gb_ppu_ptr = std::shared_ptr<gb_ppu>;

@@ -25,10 +25,13 @@ public:
     // that can be used on modern GPUs
     void set_pixel(unsigned int x, unsigned int y, gb_colour_t colour);
 
+    // Get a pixel colour at the specified framebuffer location
+    gb_colour_t get_pixel(unsigned int x, unsigned int y);
+
 private:
     using gb_colour_map_t = std::array<sf::Color, 4>;
 
-    gb_colour_map_t  m_colour_map;
+    gb_colour_map_t m_colour_map;
 };
 
 #endif // GB_FRAMEBUFFER_H_
