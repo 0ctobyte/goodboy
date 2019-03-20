@@ -10,7 +10,7 @@ gb_joypad::gb_joypad(gb_memory_manager& memory_manager)
       gb_interrupt_source(GB_JOYPAD_JUMP_ADDR, GB_JOYPAD_FLAG_BIT)
 {
     // Reset the joypad register (should be 1)
-    gb_memory_mapped_device::write_byte(GB_JOYPAD_P1_ADDR, 0xFF);
+    gb_memory_mapped_device::write_byte(GB_JOYPAD_P1_ADDR, 0xCF);
 }
 
 void gb_joypad::write_byte(uint16_t addr, uint8_t val) {
@@ -18,7 +18,7 @@ void gb_joypad::write_byte(uint16_t addr, uint8_t val) {
         // Don't overwrite bits[3:0] which are the Joypad input selects
         // bits[7:6] are reserved and should be read-as-one
         uint8_t p1 = read_byte(GB_JOYPAD_P1_ADDR);
-        val = (p1 & ~0x30) | (val & 0x30) | 0xc0;
+        val = (p1 & ~0x30) | (val & 0x30) | 0xcf;
     }
     gb_memory_mapped_device::write_byte(addr, val);
 }

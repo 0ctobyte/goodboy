@@ -44,6 +44,10 @@ private:
     gb_lcd_stat_register_ptr    m_lcd_stat;
     gb_lcd_ly_register_ptr      m_lcd_ly;
 
+    gb_memory_map&              m_memory_map;
+    gb_memory_mapped_device_ptr m_oam;
+    gb_memory_mapped_device_ptr m_vram;
+
     // Scanline clock counter
     int                         m_scanline_counter;
 };

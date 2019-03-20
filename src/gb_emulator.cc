@@ -15,6 +15,7 @@
 #define GB_RENDERER_HEIGHT (GB_HEIGHT*5)
 
 #define GB_LCDC_ADDR       (0xFF40)
+#define GB_PPU_OAM_ADDR    (0xFE00)
 
 gb_emulator::gb_emulator()
     : m_renderer(GB_RENDERER_WIDTH, GB_RENDERER_HEIGHT), m_memory_manager(), m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_manager, m_memory_map, m_cpu), m_dma(), m_cycles(0)
@@ -131,7 +132,8 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     m_interrupt_controller.add_interrupt_source(ppu);
 
     // Add the DMA
-    m_dma = std::make_shared<gb_dma>(m_memory_manager, m_memory_map);
+    gb_memory_mapped_device_ptr oam = m_memory_map.get_readable_device(GB_PPU_OAM_ADDR);
+    m_dma = std::make_shared<gb_dma>(m_memory_manager, m_memory_map, oam);
     addr_range = m_dma->get_address_range();
     m_memory_map.add_readable_device(m_dma, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(m_dma, std::get<0>(addr_range), std::get<1>(addr_range));

@@ -129,7 +129,7 @@ uint8_t gb_memory_map::read_byte(uint16_t addr) {
 
     if (device == nullptr) {
         GB_LOGGER(GB_LOG_WARN) << "read_byte: Address not implemented: " << std::hex << addr << std::endl;
-        return 0;
+        return 0xff;
     }
 
     uint8_t data = device->read_byte(naddr);
@@ -146,7 +146,7 @@ void gb_memory_map::write_byte(uint16_t addr, uint8_t data) {
 
     // Ensure we actually have a device that can handle this write request
     if (device == nullptr) {
-        GB_LOGGER(GB_LOG_WARN) << "write_byte: Address not implemented: " << std::hex << addr << std::endl;
+        GB_LOGGER(GB_LOG_WARN) << "write_byte: Address not implemented: " << std::hex << addr << " -- " << std::hex << static_cast<uint16_t>(data) << std::endl;
     } else {
         device->write_byte(naddr, data);
     }

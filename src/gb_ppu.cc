@@ -40,7 +40,7 @@ gb_ppu::gb_ppu(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_
       m_ppu_palette(std::make_shared<gb_memory_mapped_device>(memory_manager, GB_PPU_BGP_ADDR, 3)),
       m_ppu_win_scroll(std::make_shared<gb_memory_mapped_device>(memory_manager, GB_PPU_WIN_SCROLL_Y_ADDR, 2)),
       m_ppu_oam(std::make_shared<gb_memory_mapped_device>(memory_manager, GB_PPU_OAM_ADDR, GB_PPU_OAM_SIZE)),
-      m_memory_map(memory_map), m_framebuffer(framebuffer), m_next_line(0)
+      m_memory_map(memory_map), m_framebuffer(framebuffer), m_linebuffer(), m_next_line(0)
 {
     // Add the OAM memory to the memory map
     gb_address_range_t addr_range = m_ppu_oam->get_address_range();
@@ -64,7 +64,7 @@ gb_ppu::gb_ppu(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_
 gb_ppu::~gb_ppu() {
 }
 
-void gb_ppu::_draw_background(uint8_t ly, gb_ppu_scanline_colours_t& bg_colour_indices) {
+void gb_ppu::_draw_background(uint8_t ly) {
     uint8_t lcdc = m_memory_map.read_byte(GB_LCDC_ADDR);
     uint8_t scx = m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_X_ADDR);
     uint8_t scy = m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_Y_ADDR);
@@ -143,7 +143,7 @@ void gb_ppu::_draw_background(uint8_t ly, gb_ppu_scanline_colours_t& bg_colour_i
         // Get the colour index and put it in the background colour index array
         // This will be used by the sprite rendering logic to determine background priority
         uint8_t col_idx = get_tile_pixel_colour_idx(tile_data_addr, tile_pixel_x);
-        bg_colour_indices.at(lx) = (lcdc & 0x1) ? col_idx : 0;
+        m_linebuffer.at(lx) = (lcdc & 0x1) ? col_idx : 0;
 
         // If the background is turned off (LCDC[0]) just draw white
         gb_colour_t colour = (lcdc & 0x1) ? static_cast<gb_colour_t>((background_palette >> (col_idx * 2)) & 0x3) : GB_COLOUR0;
@@ -153,7 +153,7 @@ void gb_ppu::_draw_background(uint8_t ly, gb_ppu_scanline_colours_t& bg_colour_i
     }
 }
 
-void gb_ppu::_draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colour_indices) {
+void gb_ppu::_draw_sprites(uint8_t ly) {
     uint8_t lcdc = m_memory_map.read_byte(GB_LCDC_ADDR);
 
     // Don't draw sprites if LCDC[1] == 0
@@ -182,20 +182,19 @@ void gb_ppu::_draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colou
     // Sprites are visible in the current scanline iff y-sprite_size <= ly < y
     std::vector<gb_ppu_sprite_t> visible_sprites;
     visible_sprites.reserve(40);
-    for (uint8_t i = 0; i < 40; i++) {
-        uint16_t oam_entry_addr = GB_PPU_OAM_ADDR + (i * 4);
+    for (unsigned int i = 0; i < 40; i++) {
+        uint16_t oam_entry_addr = static_cast<uint16_t>(GB_PPU_OAM_ADDR + (i * 4));
 
-        // Offset y by 16 and x by 8 since sprites x, y coordinates refer to the bottom right corner
-        uint8_t y = m_ppu_oam->read_byte(oam_entry_addr) - 16;
-        uint8_t x = m_ppu_oam->read_byte(oam_entry_addr + 1) - 8;
+        uint8_t y = m_ppu_oam->read_byte(oam_entry_addr);
+        uint8_t x = m_ppu_oam->read_byte(oam_entry_addr + 1);
         uint8_t tile_num = m_ppu_oam->read_byte(oam_entry_addr + 2);
         uint8_t flags = m_ppu_oam->read_byte(oam_entry_addr + 3);
 
         // Check if sprite is visible at all
-        if (y >= 144 || x >= 160) continue;
+        if (y == 0 || y >= 160) continue;
 
         // Check if sprite is visible in the current scanline
-        if (ly < y || ly >= (y + sprite_size)) continue;
+        if (ly < (y - 16) || ly >= ((y - 16) + sprite_size)) continue;
 
         // Add sprite to vector
         tile_num = double_size ? tile_num & ~0x1 : tile_num;
@@ -203,7 +202,11 @@ void gb_ppu::_draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colou
         bool flip_y = (flags & 0x40) ? true : false;
         bool flip_x = (flags & 0x20) ? true : false;
         bool use_obp1 = (flags & 0x10) ? true : false;
-        visible_sprites.push_back({i, y, x, tile_num, bg_priority, flip_y, flip_x, use_obp1});
+        visible_sprites.push_back({static_cast<uint8_t>(i), y, x, tile_num, bg_priority, flip_y, flip_x, use_obp1});
+
+        // The Gameboy has a limitation where it can only render 10 sprites per scanline
+        // Technically sprites that have x == 0 or x >= 168 are not visible but still affect this limitation as long as y > 0 && y < 144+16
+        if (visible_sprites.size() == 10) break;
     }
 
     // Now we need to sort the visible sprites by priority (i.e. lowest priority first so they get drawn over)
@@ -217,10 +220,16 @@ void gb_ppu::_draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colou
 
     // Now go through each visible sprite and draw the part of the scanline it's visible in
     for (gb_ppu_sprite_t& sprite : visible_sprites) {
-        GB_LOGGER(GB_LOG_FATAL) << "s.x: " << std::dec << static_cast<uint16_t>(sprite.x) << " s.y: " << std::dec << static_cast<uint16_t>(sprite.y) << std::endl;
+        // Sprites are not visible if x == 0 or x >= 168
+        if (sprite.x == 0 || sprite.x >= 168) continue;
+
+        // Sprite coordinates refer to the bottom right corner. Translate this to top left corner
+        int sx = sprite.x - 8;
+        int sy = sprite.y - 16;
+
         // Get the pointer to the Sprite tile data
         // Then calculate the offset to the 2 bytes for the current scanline (depending on flip_y)
-        uint8_t y = ly - sprite.y;
+        uint8_t y = static_cast<uint8_t>(ly - sy);
         uint16_t sprite_addr = sprite_tile_data_addr + (sprite.tile_num * 16);
         uint8_t line_offset = (sprite.flip_y ? (sprite_size - 1) - y : y) * 2;
 
@@ -228,10 +237,20 @@ void gb_ppu::_draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colou
         uint8_t sprite_line_lo = this->read_byte(sprite_addr + line_offset);
         uint8_t sprite_line_hi = this->read_byte(sprite_addr + (line_offset + 1));
 
+        //std::vector<uint8_t> tile_list ({0, 1, 2, 3, 4, 5, 6, 7, 8, 32, 33, 34, 35, 36, 37, 52, 53, 64, 65, 66, 67, 48, 49, 80, 81, 82, 83, 96, 97, 112, 113, 128, 130, 144, 145, 146, 178, 255});
+        //if (std::any_of(tile_list.begin(), tile_list.end(), [sprite](uint8_t i) -> bool { return i == sprite.tile_num; })) {
+        //if (sprite.use_obp1) {
+        //    sprite_line_lo = static_cast<uint8_t>(((sprite_line_lo & 0xf) << 4) | ((sprite_line_lo & 0xf0) >> 4));
+        //    sprite_line_hi = static_cast<uint8_t>(((sprite_line_hi & 0xf) << 4) | ((sprite_line_hi & 0xf0) >> 4));
+        //}
+
         // Which palette is this sprite using?
         uint8_t obj_palette = sprite.use_obp1 ? obp1 : obp0;
 
-        for (unsigned int lx = sprite.x; lx < (sprite.x + 8); lx++) {
+        for (int lx = sx; lx < (sx + 8); lx++) {
+            // Check if lx is out of bounds
+            if (lx < 0 || lx >= 160) continue;
+
             // Get colour index from the tile line; works the same way as the background tile data
             uint8_t x = sprite.flip_x ? (lx & 0x7) : 7 - (lx & 0x7);
             uint8_t colour_idx = static_cast<uint8_t>(((sprite_line_lo >> x) & 0x1) | (((sprite_line_hi >> x) & 0x1) << 1));
@@ -244,10 +263,10 @@ void gb_ppu::_draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colou
 
             // If BG priority is enabled then don't draw the pixel if the current background pixel colour is not colour 0
             // The background has priority for all other colours except colour 0 in which case the sprite pixel can be drawn
-            if (sprite.bg_priority && bg_colour_indices.at(lx) != 0) continue;
+            if (sprite.bg_priority && m_linebuffer.at(static_cast<size_t>(lx)) != 0) continue;
 
             // Draw the pixel into the framebuffer
-            m_framebuffer.set_pixel(lx, ly, colour);
+            m_framebuffer.set_pixel(static_cast<uint8_t>(lx), ly, colour);
         }
     }
 }
@@ -256,15 +275,14 @@ bool gb_ppu::update(int cycles) {
     bool interrupt = false;
     uint8_t ly = m_memory_map.read_byte(GB_LCD_LY_ADDR);
 
-    // Assert the V-blank interrupt
+    // Assert the V-blank interrupt if ly == 144
     if (ly == 144 && m_next_line == ly) interrupt = true;
 
     // Draw the next scan line of the background; 160 pixels per scanline
     // Draw the window & finally draw the sprites
     if (m_next_line == ly && ly < 144) {
-        gb_ppu_scanline_colours_t bg_colour_indices;
-        _draw_background(ly, bg_colour_indices);
-        _draw_sprites(ly, bg_colour_indices);
+        _draw_background(ly);
+        _draw_sprites(ly);
     }
 
     // Update next scan line

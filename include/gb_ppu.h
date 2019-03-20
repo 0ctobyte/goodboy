@@ -15,7 +15,7 @@ public:
     virtual bool update(int cycles) override;
 
 private:
-    using gb_ppu_scanline_colours_t = std::array<uint8_t, 160>;
+    using gb_ppu_linebuffer_t = std::array<uint8_t, 160>;
 
     // Registers used by the PPU
     // bg_scroll - SCY: BG Y Position SCX: BG X Position
@@ -38,12 +38,13 @@ private:
 
     // Reference to framebuffer where pixels will be drawn
     gb_framebuffer&             m_framebuffer;
+    gb_ppu_linebuffer_t         m_linebuffer;
 
     // Previous scanline
     int                         m_next_line;
 
-    void _draw_background(uint8_t ly, gb_ppu_scanline_colours_t& bg_colour_indices);
-    void _draw_sprites(uint8_t ly, const gb_ppu_scanline_colours_t& bg_colour_indices);
+    void _draw_background(uint8_t ly);
+    void _draw_sprites(uint8_t ly);
 };
 
 using gb_ppu_ptr = std::shared_ptr<gb_ppu>;

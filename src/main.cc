@@ -8,6 +8,7 @@ int main(int argc, char **argv) {
     if (!options.parse_opts()) return EXIT_FAILURE;
 
     gb_logger::instance().enable_tracing(options.m_tracing);
+    gb_logger::instance().set_level(GB_LOG_DEBUG);
 
     gb_emulator emulator;
 
