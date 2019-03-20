@@ -269,6 +269,7 @@ bool gb_ppu::update(int cycles) {
 
     // Update next scan line
     m_next_line = ly + 1;
+    m_next_line = (m_next_line > 153) ? 0 : m_next_line;
 
     return interrupt;
 }
