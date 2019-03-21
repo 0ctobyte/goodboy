@@ -4,7 +4,7 @@
 
 gb_renderer::gb_renderer(unsigned int width, unsigned int height)
     : m_window(sf::VideoMode(std::max(width, static_cast<unsigned int>(GB_WIDTH)), std::max(height, static_cast<unsigned int>(GB_HEIGHT))), "gb_emulator", sf::Style::Default),
-      m_framebuffer(), m_texture(), m_sprite(), m_open(true)
+      m_framebuffer(), m_texture(), m_sprite(), m_input(), m_open(true)
 {
     sf::Vector2f window_size (m_window.getSize());
     m_framebuffer.create(GB_WIDTH, GB_HEIGHT);
@@ -22,6 +22,10 @@ gb_framebuffer& gb_renderer::get_framebuffer() {
     return m_framebuffer;
 }
 
+gb_input& gb_renderer::get_input() {
+    return m_input;
+}
+
 bool gb_renderer::is_open() {
     return m_open;
 }
@@ -30,9 +34,18 @@ void gb_renderer::update(bool draw_framebuffer) {
     sf::Event event;
 
     while (m_window.pollEvent(event)) {
-        if (event.type == sf::Event::Closed) {
-            m_open = false;
-            m_window.close();
+        switch (event.type) {
+            case sf::Event::Closed:
+                m_open = false;
+                m_window.close();
+                break;
+            case sf::Event::KeyPressed:
+                m_input.set_pressed(event.key.code);
+                break;
+            case sf::Event::KeyReleased:
+                m_input.set_released(event.key.code);
+                break;
+            default: break;
         }
     }
 

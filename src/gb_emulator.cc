@@ -105,7 +105,7 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     m_interrupt_controller.add_interrupt_source(timer);
 
     // Add Joypad
-    gb_joypad_ptr joypad = std::make_shared<gb_joypad>(m_memory_manager);
+    gb_joypad_ptr joypad = std::make_shared<gb_joypad>(m_memory_manager, m_renderer.get_input());
     addr_range = joypad->get_address_range();
     m_memory_map.add_readable_device(joypad, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(joypad, std::get<0>(addr_range), std::get<1>(addr_range));

@@ -6,6 +6,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "gb_framebuffer.h"
+#include "gb_input.h"
 
 #define GB_WIDTH  (160)
 #define GB_HEIGHT (144)
@@ -18,6 +19,9 @@ public:
 
     // Get a reference to the framebuffer
     gb_framebuffer& get_framebuffer();
+
+    // Get a reference to the input class
+    gb_input& get_input();
 
     // Check if the window is still open or if it has been closed
     bool is_open();
@@ -32,6 +36,7 @@ private:
     gb_framebuffer   m_framebuffer;
     sf::Texture      m_texture;
     sf::Sprite       m_sprite;
+    gb_input         m_input;
     bool             m_open;
 };
 

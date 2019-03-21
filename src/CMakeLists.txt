@@ -6,6 +6,7 @@ target_sources(gb_emulator
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_dma
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator_opts
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_framebuffer
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_input
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_interrupt_controller
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_interrupt_source
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_joypad
