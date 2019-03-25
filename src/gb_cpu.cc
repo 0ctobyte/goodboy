@@ -814,11 +814,6 @@ uint16_t gb_cpu::_operand_get_mem_8_plus_io_base() {
     return (offset + GB_MEMORY_MAP_IO_BASE);
 }
 
-uint16_t gb_cpu::_operand_get_mem_8_plus_io_base_mem() {
-    uint16_t addr = _operand_get_mem_8_plus_io_base();
-    return m_memory_map.read_byte(addr);
-}
-
 uint16_t gb_cpu::_operand_get_register_c_plus_io_base() {
     uint16_t offset = _operand_get_register_c();
     return (offset + GB_MEMORY_MAP_IO_BASE);
@@ -996,6 +991,10 @@ void gb_cpu::_operand_set_register_sp(uint16_t addr, uint16_t val) {
 
 void gb_cpu::_operand_set_register_pc(uint16_t addr, uint16_t val) {
     m_registers.pc = val;
+}
+
+void gb_cpu::_operand_set_register_a_mem(uint16_t addr, uint16_t val) {
+    m_registers.a = static_cast<uint8_t>(m_memory_map.read_byte(val));
 }
 
 void gb_cpu::_operand_set_mem_8(uint16_t addr, uint16_t val) {

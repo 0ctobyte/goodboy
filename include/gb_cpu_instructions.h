@@ -248,7 +248,7 @@
 /* 0xED */ {"UNKOWN", B4_(_op_print_type0), nullptr, nullptr, nullptr, nullptr, 0, 0},\
 /* 0xEE */ {"XOR 0x%02x", B4_(_op_print_type2), B0_(_operand_get_mem_8), B0_(_operand_get_register_a), B2_(_operand_set_register_a), B1_(_op_exec_xor), 8, 8},\
 /* 0xEF */ {"RST 28H", B4_(_op_print_type0), B0_(_operand_get_rst_28), nullptr, B2_(_operand_set_mem_sp_16), B1_(_op_exec_rst), 16, 16},\
-/* 0xF0 */ {"LD A, (0xff00+0x%02x)", B4_(_op_print_type2), B0_(_operand_get_mem_8_plus_io_base_mem), nullptr, B2_(_operand_set_register_a), B1_(_op_exec_ld), 12, 12},\
+/* 0xF0 */ {"LD A, (0xff00+0x%02x)", B4_(_op_print_type2), B0_(_operand_get_mem_8_plus_io_base), nullptr, B2_(_operand_set_register_a_mem), B1_(_op_exec_ld), 12, 12},\
 /* 0xF1 */ {"POP AF", B4_(_op_print_type0), B0_(_operand_get_mem_sp_16), nullptr, B2_(_operand_set_register_af), B1_(_op_exec_ld), 12, 12},\
 /* 0xF2 */ {"LD A, (0xff00+C)", B4_(_op_print_type0), B0_(_operand_get_register_c_plus_io_base_mem), nullptr, B2_(_operand_set_register_a), B1_(_op_exec_ld), 8, 8},\
 /* 0xF3 */ {"DI", B4_(_op_print_type0), nullptr, nullptr, nullptr, B1_(_op_exec_di), 4, 4},\

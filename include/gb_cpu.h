@@ -137,7 +137,6 @@ private:
     uint16_t _operand_get_register_hl_minus();
     uint16_t _operand_get_mem_8();
     uint16_t _operand_get_mem_8_plus_io_base();
-    uint16_t _operand_get_mem_8_plus_io_base_mem();
     uint16_t _operand_get_register_c_plus_io_base();
     uint16_t _operand_get_register_c_plus_io_base_mem();
     uint16_t _operand_get_mem_16();
@@ -183,6 +182,7 @@ private:
     void _operand_set_register_hl(uint16_t addr, uint16_t val);
     void _operand_set_register_sp(uint16_t addr, uint16_t val);
     void _operand_set_register_pc(uint16_t addr, uint16_t val);
+    void _operand_set_register_a_mem(uint16_t addr, uint16_t val);
     void _operand_set_mem_8(uint16_t addr, uint16_t val);
     void _operand_set_mem_16(uint16_t addr, uint16_t val);
     void _operand_set_mem_hl_8(uint16_t addr, uint16_t val);
