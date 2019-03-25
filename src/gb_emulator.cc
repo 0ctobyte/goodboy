@@ -3,7 +3,7 @@
 #include <fstream>
 
 #include "gb_emulator.h"
-#include "gb_rom.h"
+#include "gb_memory_bank_controller.h"
 #include "gb_ram.h"
 #include "gb_serial_io.h"
 #include "gb_timer.h"
@@ -58,34 +58,16 @@ bool gb_emulator::_run_bootrom() {
 }
 
 void gb_emulator::load_rom(const std::string& rom_filename) {
-    std::ifstream rom_file (rom_filename, std::ifstream::binary);
+    // Initialize the memory bank controller which controls the first 32KB of ROM and the 8KB of external RAM
+    // The MBC listens to writes to the ROM space (0x0 - 0x8000) and configures the ROM/RAM and other devices
+    // mapped to the ROM and external RAM space inside the cartridge
+    gb_memory_bank_controller_ptr mbc = std::make_shared<gb_memory_bank_controller>(m_memory_manager, m_memory_map);
+    mbc->load_rom(rom_filename);
+    gb_address_range_t addr_range = mbc->get_address_range();
+    m_memory_map.add_writeable_device(mbc, std::get<0>(addr_range), std::get<1>(addr_range));
 
-    if (!rom_file) {
-        std::ostringstream sstr;
-        sstr << "gb_emulator::load_rom() - Invalid ROM file: " << rom_filename;
-        throw std::runtime_error(sstr.str());
-    }
-
-    rom_file.seekg(0, rom_file.end);
-    int binsize = std::min(static_cast<int>(rom_file.tellg()), 0x10000);
-    rom_file.seekg(0, rom_file.beg);
-
-    // Load first 32KB of ROM with ROM file data
-    gb_rom_ptr rom = std::make_shared<gb_rom>(m_memory_manager, 0x0000, 0x8000);
-    rom_file.read(reinterpret_cast<char*>(rom->get_mem()), std::min(0x8000, binsize));
-
-    // Add ROM as readable device but not writeable...of course
-    gb_address_range_t addr_range = rom->get_address_range();
-    m_memory_map.add_readable_device(rom, std::get<0>(addr_range), std::get<1>(addr_range));
-
-    // Add 8KB of external RAM (on the cartridge)
-    gb_ram_ptr ext_ram = std::make_shared<gb_ram>(m_memory_manager, 0xA000, 0x2000);
-    addr_range = ext_ram->get_address_range();
-    m_memory_map.add_readable_device(ext_ram, std::get<0>(addr_range), std::get<1>(addr_range));
-    m_memory_map.add_writeable_device(ext_ram, std::get<0>(addr_range), std::get<1>(addr_range));
-
-    // Another 8KB of work RAM (on the gameboy)
-    gb_ram_ptr work_ram = std::make_shared<gb_ram>(m_memory_manager, 0xC000, 0x2000);
+    // Add 8KB of work RAM (on the gameboy)
+    gb_ram_ptr work_ram = std::make_shared<gb_ram>(m_memory_manager, 0xC000, 0x2000, 0x2000);
     addr_range = work_ram->get_address_range();
     m_memory_map.add_readable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
@@ -112,7 +94,7 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     m_interrupt_controller.add_interrupt_source(joypad);
 
     // Add 128 bytes of high RAM (used for stack and temp variables)
-    gb_ram_ptr high_ram = std::make_shared<gb_ram>(m_memory_manager, 0xFF80, 0x7F);
+    gb_ram_ptr high_ram = std::make_shared<gb_ram>(m_memory_manager, 0xFF80, 0x7F, 0x7F);
     addr_range = high_ram->get_address_range();
     m_memory_map.add_readable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(high_ram, std::get<0>(addr_range), std::get<1>(addr_range));

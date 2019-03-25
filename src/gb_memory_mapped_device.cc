@@ -3,6 +3,11 @@
 
 #include "gb_memory_mapped_device.h"
 
+gb_memory_mapped_device::gb_memory_mapped_device(gb_memory_manager& memory_manager)
+    : m_start_addr(0), m_size(0), m_memory_manager(memory_manager)
+{
+}
+
 gb_memory_mapped_device::gb_memory_mapped_device(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size)
     : m_start_addr(start_addr), m_size(size), m_memory_manager(memory_manager)
 {

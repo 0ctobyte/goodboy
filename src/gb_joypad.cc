@@ -11,7 +11,7 @@ gb_joypad::gb_joypad(gb_memory_manager& memory_manager, gb_input& input)
       m_input(input)
 {
     // Reset the joypad register (should be 1)
-    gb_memory_mapped_device::write_byte(GB_JOYPAD_P1_ADDR, 0xCF);
+    gb_memory_mapped_device::write_byte(GB_JOYPAD_P1_ADDR, 0xFF);
 }
 
 void gb_joypad::write_byte(uint16_t addr, uint8_t val) {

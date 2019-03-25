@@ -6,12 +6,19 @@
 
 #include "gb_memory_mapped_device.h"
 
+#define GB_ROM_BANK_SIZE (0x4000)
+
 class gb_rom : public gb_memory_mapped_device {
 public:
-    gb_rom(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size);
+    gb_rom(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size, size_t rom_size);
     virtual ~gb_rom() override;
 
+    virtual unsigned long translate(uint16_t addr) const override;
     virtual void write_byte(uint16_t addr, uint8_t val) override;
+
+private:
+    unsigned long m_num_banks;
+    unsigned long m_cur_bank;
 };
 
 using gb_rom_ptr = std::shared_ptr<gb_rom>;

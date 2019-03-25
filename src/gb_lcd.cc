@@ -106,8 +106,9 @@ bool gb_lcd::update(int cycles) {
 
         interrupt = (mode != 2 && (lcd_stat & 0x20)) ? true : interrupt;
         lcd_stat = (lcd_stat & ~0x3) | 2;
-    } else if (m_scanline_counter < 204) {
-        // LCD is in mode 3 between 80 - 204 clocks (transferring VRAM and OAM data to LCD, VRAM & OAM is not accessible)
+    } else if (m_scanline_counter < 252) {
+        // LCD is in mode 3 between 80 - 252 clocks, 172 clocks, (transferring VRAM and OAM data to LCD, VRAM & OAM is not accessible)
+        // This period actually varies depending on the number of sprites being rendered
         // No interrupt for mode 3
         if (m_vram == nullptr) {
             m_vram = m_memory_map.get_readable_device(GB_VIDEO_RAM_ADDR);

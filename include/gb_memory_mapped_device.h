@@ -26,6 +26,8 @@ protected:
     size_t               m_size;
     gb_memory_manager&   m_memory_manager;
     unsigned long        m_mm_start_addr;
+
+    gb_memory_mapped_device(gb_memory_manager& memory_manager);
 };
 
 using gb_memory_mapped_device_ptr = std::shared_ptr<gb_memory_mapped_device>;

@@ -191,7 +191,7 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
         uint8_t flags = m_ppu_oam->read_byte(oam_entry_addr + 3);
 
         // Check if sprite is visible at all
-        if (y == 0 || y >= 160) continue;
+        if (y == 0 || y >= 160 || x == 0 || x >= 168) continue;
 
         // Check if sprite is visible in the current scanline
         if (ly < (y - 16) || ly >= ((y - 16) + sprite_size)) continue;
@@ -205,7 +205,6 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
         visible_sprites.push_back({static_cast<uint8_t>(i), y, x, tile_num, bg_priority, flip_y, flip_x, use_obp1});
 
         // The Gameboy has a limitation where it can only render 10 sprites per scanline
-        // Technically sprites that have x == 0 or x >= 168 are not visible but still affect this limitation as long as y > 0 && y < 144+16
         if (visible_sprites.size() == 10) break;
     }
 
@@ -220,9 +219,6 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
 
     // Now go through each visible sprite and draw the part of the scanline it's visible in
     for (gb_ppu_sprite_t& sprite : visible_sprites) {
-        // Sprites are not visible if x == 0 or x >= 168
-        if (sprite.x == 0 || sprite.x >= 168) continue;
-
         // Sprite coordinates refer to the bottom right corner. Translate this to top left corner
         int sx = sprite.x - 8;
         int sy = sprite.y - 16;
