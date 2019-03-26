@@ -46,25 +46,47 @@ ncurses_stream::~ncurses_stream() {
     m_src.rdbuf(m_srcbuf);
 }
 
+#define COMMAND_DOC_LIST \
+{\
+    {"h", "Print out this command list"},\
+    {"n", "Step through one instruction"},\
+    {"m", "Modify or view a single 8-bit or 16-bit register. To read: hl | To write: hl=0xff00"},\
+    {"r", "Dump all registers and flags"},\
+    {"x", "Examine or modify a single 8-bit memory location. To read: 0xff80 | To write: 0xff80=0xff"},\
+    {"c", "Continue or halt execution of CPU with instruction tracing enabled"},\
+    {"C", "Continue or halt execution of CPU with instruction tracing disabled. Halting will re-enable tracing"},\
+    {"u", "Scroll up half a page"},\
+    {"d", "Scroll down half a page"},\
+    {"b", "Scroll up one full page"},\
+    {"f", "Scroll down one full page"},\
+    {"G", "Scroll to beginning"},\
+    {"g", "Scroll to end"},\
+    {"Up", "Scroll up one line"},\
+    {"Down", "Scroll down one line"},\
+    {"q", "Quit"}\
+}
+
 #define KEY_MAP_INIT \
 {\
+    {'h', std::bind(&gb_debugger::_debugger_help, this)},\
     {'n', std::bind(&gb_debugger::_debugger_step_once, this)},\
+    {'m', std::bind(&gb_debugger::_debugger_modify_register, this)},\
     {'r', std::bind(&gb_debugger::_debugger_dump_registers, this)},\
-    {'w', std::bind(&gb_debugger::_debugger_modify_register, this)},\
     {'x', std::bind(&gb_debugger::_debugger_access_memory, this)},\
+    {'c', std::bind(&gb_debugger::_debugger_toggle_continue, this)},\
+    {'C', std::bind(&gb_debugger::_debugger_toggle_continue_and_tracing, this)},\
     {'u', std::bind(&gb_debugger::_debugger_scroll_up_half_pg, this)},\
     {'d', std::bind(&gb_debugger::_debugger_scroll_dn_half_pg, this)},\
     {'b', std::bind(&gb_debugger::_debugger_scroll_up_full_pg, this)},\
     {'f', std::bind(&gb_debugger::_debugger_scroll_dn_full_pg, this)},\
     {'G', std::bind(&gb_debugger::_debugger_scroll_to_start, this)},\
     {'g', std::bind(&gb_debugger::_debugger_scroll_to_end, this)},\
-    {'c', std::bind(&gb_debugger::_debugger_toggle_continue, this)},\
     {KEY_UP, std::bind(&gb_debugger::_debugger_scroll_up_one_line, this)},\
     {KEY_DOWN, std::bind(&gb_debugger::_debugger_scroll_dn_one_line, this)}\
-}\
+}
 
 gb_debugger::gb_debugger(gb_emulator& emulator)
-    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
+    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_command_doc(COMMAND_DOC_LIST), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
 {
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
@@ -106,7 +128,7 @@ void gb_debugger::go() {
         } catch (const std::out_of_range& oor) {}
 
         prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines-1, m_nwin_cols);
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        if (!m_continue) std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 
@@ -137,11 +159,11 @@ void gb_debugger::_handle_exception(const std::string& str, const std::exception
     _restore_window(to_line);
 }
 
-void gb_debugger::_print_prompt(const std::string& str, int line) {
+void gb_debugger::_print_line(const std::string& str, int line) {
     _clear_line(line);
     wmove(m_nwin, line, 0);
     GB_LOGGER(GB_LOG_TRACE) << str;
-    prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines, m_nwin_cols);
+    prefresh(m_nwin, std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos), 0, 0, 0, m_nwin_lines, m_nwin_cols);
 }
 
 std::string gb_debugger::_get_string(int line, int col) {
@@ -164,6 +186,26 @@ std::string gb_debugger::_get_string(int line, int col) {
     return input;
 }
 
+void gb_debugger::_debugger_help() {
+    // Get current Y and end-of-screen y
+    int cur_y = getcury(m_nwin);
+    int eos_y = std::max(m_nwin_lines, cur_y);
+
+    // Go through command documentation and print it starting at eos_y
+    for (const std::array<std::string, 2>& command : m_command_doc) {
+        long i = &command - &m_command_doc[0];
+        _print_line(command[0] + "\t- " + command[1], eos_y + static_cast<int>(i));
+    }
+
+    // Wait for enter
+    for (int c = wgetch(m_nwin); c != '\n' && c != '\r'; c = wgetch(m_nwin));
+
+    // Clear lines & restore window
+    for (size_t i = 0; i < m_command_doc.size(); i++) _clear_line(eos_y+static_cast<int>(i));
+    _restore_window(cur_y);
+    _update_pos();
+}
+
 void gb_debugger::_debugger_step_once() {
     m_emulator.step(1);
     _update_pos();
@@ -180,7 +222,7 @@ void gb_debugger::_debugger_modify_register() {
     int eos_y = std::max(m_nwin_lines, cur_y);
 
     // Move to end of screen, clear it and print prompt
-    _print_prompt("Register: ", eos_y);
+    _print_line("Register: ", eos_y);
 
     // Wait for input
     std::string input = _get_string(eos_y, getcurx(m_nwin));
@@ -267,7 +309,7 @@ void gb_debugger::_debugger_access_memory() {
     int eos_y = std::max(m_nwin_lines, cur_y);
 
     // Move to end of screen, clear it and print prompt
-    _print_prompt("Address: ", eos_y);
+    _print_line("Address: ", eos_y);
 
     // Wait for address input
     std::string input = _get_string(eos_y, getcurx(m_nwin));
@@ -355,4 +397,10 @@ void gb_debugger::_debugger_scroll_dn_one_line() {
 
 void gb_debugger::_debugger_toggle_continue() {
     m_continue = m_continue ? false : true;
+    gb_logger::instance().enable_tracing(true);
+}
+
+void gb_debugger::_debugger_toggle_continue_and_tracing() {
+    _debugger_toggle_continue();
+    gb_logger::instance().enable_tracing(!m_continue);
 }
