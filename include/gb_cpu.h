@@ -7,6 +7,7 @@
 #include <functional>
 
 #include "gb_memory_map.h"
+#include "gb_breakpoint.h"
 
 class gb_cpu {
 friend class gb_debugger;
@@ -69,6 +70,8 @@ private:
     eidiflag_t                 m_eidi_flag;
     bool                       m_interrupt_enable;
     bool                       m_halted;
+    bool                       m_bp_enabled;
+    gb_breakpoint              m_bp;
 
     // Op execution routines
     int _op_exec_cb(const instruction_t& instruction);

@@ -1,5 +1,6 @@
 target_sources(goodboy
     PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_breakpoint
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_cpu
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_debugger

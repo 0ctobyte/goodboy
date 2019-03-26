@@ -21,7 +21,8 @@
 #define FLAGS_SET_IF_C_BORROW(x,y)  { if ((x) > (y)) FLAGS_SET(FLAGS_C); }
 
 gb_cpu::gb_cpu(gb_memory_map& memory_map)
-    : m_instructions(INSTRUCTIONS_INIT), m_cb_instructions(CB_INSTRUCTIONS_INIT), m_memory_map(memory_map), m_eidi_flag(EIDI_NONE), m_interrupt_enable(true), m_halted(false)
+    : m_instructions(INSTRUCTIONS_INIT), m_cb_instructions(CB_INSTRUCTIONS_INIT), m_memory_map(memory_map), m_eidi_flag(EIDI_NONE), m_interrupt_enable(true), m_halted(false),
+      m_bp_enabled(false), m_bp()
 {
     m_registers.af = 0x01b0;
     m_registers.bc = 0x0013;
@@ -84,11 +85,19 @@ int gb_cpu::step() {
         return 0;
     }
 
+    // Enabling or disabling the interrupt flags are delayed by one cycles
+    // The eidi_flag is set by the EI and DI instructions and checked the next cycle here
     if (m_eidi_flag == EIDI_IENABLE)  m_interrupt_enable = true;
     if (m_eidi_flag == EIDI_IDISABLE) m_interrupt_enable = false;
     m_eidi_flag = EIDI_NONE;
 
-    return instruction.op_exec(instruction);
+    // Execute instruction
+    int cycles = instruction.op_exec(instruction);
+
+    // Check for breakpoints
+    if (m_bp_enabled) m_bp.match_breakpoint(m_registers.pc);
+
+    return cycles;
 }
 
 int gb_cpu::_op_exec_cb(const instruction_t& instruction) {

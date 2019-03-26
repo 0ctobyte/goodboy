@@ -16,6 +16,7 @@ public:
     ~gb_debugger();
 
     void go();
+    void breakpoint_callback(unsigned int bp);
 
 private:
     using key_handler_t      = std::function<void()>;
@@ -37,8 +38,9 @@ private:
     void _update_pos();
     void _clear_line(int line);
     void _restore_window(int line);
-    void _handle_exception(const std::string& str, const std::exception& e, int from_line, int to_line);
     void _print_line(const std::string& str, int line);
+    void _wait_newline(int line);
+    void _handle_exception(const std::string& str, const std::exception& e, int from_line, int to_line);
     std::string _get_string(int line, int col);
 
     void _debugger_help();
@@ -46,10 +48,9 @@ private:
     void _debugger_dump_registers();
     void _debugger_modify_register();
     void _debugger_access_memory();
+    void _debugger_breakpoints();
     void _debugger_scroll_up_half_pg();
     void _debugger_scroll_dn_half_pg();
-    void _debugger_scroll_up_full_pg();
-    void _debugger_scroll_dn_full_pg();
     void _debugger_scroll_to_start();
     void _debugger_scroll_to_end();
     void _debugger_scroll_up_one_line();
