@@ -52,4 +52,4 @@ The GoodBoy debugger is an ncurses terminal app and supports the following featu
 * Modifying and viewing a single memory location
 * Scrolling support to view complete trace in the terminal
 
-For command usage, type 'h' in the debugger.
+For command usage, type `h` in the debugger.
