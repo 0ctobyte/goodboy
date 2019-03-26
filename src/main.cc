@@ -14,8 +14,8 @@ int main(int argc, char **argv) {
 
     try {
         emulator.load_rom(options.m_rom_filename);
-    } catch (std::runtime_error rerr) {
-        GB_LOGGER(GB_LOG_FATAL) << rerr.what() << std::endl;
+    } catch (const std::exception& e) {
+        GB_LOGGER(GB_LOG_FATAL) << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 

@@ -15,9 +15,9 @@ public:
     virtual uint8_t read_byte(uint16_t addr) override;
 
 private:
-    //bool           m_has_ram;
-    //bool           m_has_battery;
-    //bool           m_has_timer;
+    bool           m_has_ram;
+    bool           m_has_battery;
+    bool           m_has_rtc;
     //bool           m_ram_enable;
     //bool           m_ram_rom_mode;
     //unsigned long  m_cur_rom_bank;
