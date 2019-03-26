@@ -1,14 +1,12 @@
 #include <algorithm>
 
-#include "gb_logger.h"
 #include "gb_serial_io.h"
+#include "gb_io_defs.h"
+#include "gb_logger.h"
 
-#define GB_SERIAL_IO_SB_ADDR              (0xFF01)
-#define GB_SERIAL_IO_SC_ADDR              (0xFF02)
 #define GB_SERIAL_IO_JUMP_ADDR            (0x58)
 #define GB_SERIAL_IO_FLAG_BIT             (0x3)
 
-#define CLOCK_SPEED                       (4194304)
 #define GB_SERIAL_IO_INTERNAL_CLOCK_FREQ  (8192)
 #define GB_SERIAL_IO_CYCLES_TO_IRQ        ((CLOCK_SPEED)/((GB_SERIAL_IO_INTERNAL_CLOCK_FREQ)/8))
 

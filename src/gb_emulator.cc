@@ -10,12 +10,10 @@
 #include "gb_joypad.h"
 #include "gb_lcd.h"
 #include "gb_ppu.h"
+#include "gb_io_defs.h"
 
 #define GB_RENDERER_WIDTH  (GB_WIDTH*5)
 #define GB_RENDERER_HEIGHT (GB_HEIGHT*5)
-
-#define GB_LCDC_ADDR       (0xFF40)
-#define GB_PPU_OAM_ADDR    (0xFE00)
 
 gb_emulator::gb_emulator()
     : m_renderer(GB_RENDERER_WIDTH, GB_RENDERER_HEIGHT), m_memory_manager(), m_memory_map(), m_cpu(m_memory_map), m_interrupt_controller(m_memory_manager, m_memory_map, m_cpu), m_dma(), m_cycles(0)

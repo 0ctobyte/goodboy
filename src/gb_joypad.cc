@@ -1,6 +1,5 @@
 #include "gb_joypad.h"
-
-#define GB_JOYPAD_P1_ADDR   (0xFF00)
+#include "gb_io_defs.h"
 
 #define GB_JOYPAD_JUMP_ADDR (0x0060)
 #define GB_JOYPAD_FLAG_BIT  (4)

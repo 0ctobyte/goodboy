@@ -1,8 +1,6 @@
 #include "gb_dma.h"
+#include "gb_io_defs.h"
 #include "gb_logger.h"
-
-#define GB_DMA_ADDR       (0xFF46)
-#define GB_PPU_OAM_ADDR   (0xFE00)
 
 gb_dma::gb_dma(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_memory_mapped_device_ptr& oam)
     : gb_memory_mapped_device(memory_manager, GB_DMA_ADDR, 1),

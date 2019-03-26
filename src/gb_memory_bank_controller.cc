@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "gb_memory_bank_controller.h"
+#include "gb_io_defs.h"
 #include "gb_logger.h"
 
 // The memory bank controller responds to writes in the following address space

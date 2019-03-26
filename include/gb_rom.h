@@ -6,8 +6,6 @@
 
 #include "gb_memory_mapped_device.h"
 
-#define GB_ROM_BANK_SIZE (0x4000)
-
 class gb_rom : public gb_memory_mapped_device {
 public:
     gb_rom(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size, size_t rom_size);

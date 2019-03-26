@@ -1,8 +1,9 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "gb_logger.h"
 #include "gb_rom.h"
+#include "gb_io_defs.h"
+#include "gb_logger.h"
 
 gb_rom::gb_rom(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size, size_t rom_size)
     :  gb_memory_mapped_device(memory_manager),

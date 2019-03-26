@@ -6,8 +6,6 @@
 
 #include "gb_memory_mapped_device.h"
 
-#define GB_RAM_BANK_SIZE (0x2000)
-
 class gb_ram : public gb_memory_mapped_device {
 public:
     gb_ram(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size, size_t ram_size);

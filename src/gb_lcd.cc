@@ -1,17 +1,8 @@
 #include "gb_lcd.h"
+#include "gb_io_defs.h"
 
 #define GB_LCD_STAT_JUMP_ADDR (0x48)
 #define GB_LCD_FLAG_BIT       (0x1)
-
-#define GB_LCDC_ADDR          (0xFF40)
-#define GB_LCD_STAT_ADDR      (0xFF41)
-#define GB_LCD_LY_ADDR        (0xFF44)
-#define GB_LCD_LYC_ADDR       (0xFF45)
-
-#define GB_VIDEO_RAM_ADDR     (0x8000)
-#define GB_VIDEO_RAM_SIZE     (0x2000)
-#define GB_PPU_OAM_ADDR       (0xFE00)
-#define GB_PPU_OAM_SIZE       (0x00A0)
 
 gb_lcd::gb_lcd_ly_register::gb_lcd_ly_register(gb_memory_manager& memory_manager)
     : gb_memory_mapped_device(memory_manager, GB_LCD_LY_ADDR, 2)

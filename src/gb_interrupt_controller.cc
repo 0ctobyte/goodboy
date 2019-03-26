@@ -2,9 +2,7 @@
 #include <algorithm>
 
 #include "gb_interrupt_controller.h"
-
-#define GB_IFLAGS_ADDR   (0xFF0F)
-#define GB_IENABLE_ADDR  (0xFFFF)
+#include "gb_io_defs.h"
 
 gb_interrupt_controller::gb_interrupt_register::gb_interrupt_register(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size)
     : gb_memory_mapped_device(memory_manager, start_addr, size)

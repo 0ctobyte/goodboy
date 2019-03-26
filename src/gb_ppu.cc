@@ -1,26 +1,9 @@
 #include "gb_ppu.h"
+#include "gb_io_defs.h"
 #include "gb_logger.h"
-
-#define GB_VIDEO_RAM_ADDR        (0x8000)
-#define GB_VIDEO_RAM_SIZE        (0x2000)
-#define GB_PPU_OAM_ADDR          (0xFE00)
-#define GB_PPU_OAM_SIZE          (0x00A0)
-
-#define GB_PPU_BG_SCROLL_Y_ADDR  (0xFF42)
-#define GB_PPU_BG_SCROLL_X_ADDR  (0xFF43)
-#define GB_PPU_BGP_ADDR          (0xFF47)
-#define GB_PPU_OBP0_ADDR         (0xFF48)
-#define GB_PPU_OBP1_ADDR         (0xFF49)
-#define GB_PPU_WIN_SCROLL_Y_ADDR (0xFF4A)
-//#define GB_PPU_WIN_SCROLL_X_ADDR (0xFF4B)
 
 #define GB_PPU_VBLANK_JUMP_ADDR  (0x40)
 #define GB_PPU_VBLANK_FLAG_BIT   (0x0)
-
-#define GB_LCDC_ADDR             (0xFF40)
-//#define GB_LCD_STAT_ADDR         (0xFF41)
-#define GB_LCD_LY_ADDR           (0xFF44)
-//#define GB_LCD_LYC_ADDR          (0xFF45)
 
 struct gb_ppu_sprite_t {
     uint8_t  entry_num; // Entry # in the OAM, used for priority calculation
