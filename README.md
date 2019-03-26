@@ -12,7 +12,7 @@ Currently the CPU core passes all of blargg's CPU instruction tests. It can play
 
 ## Build
 
-![cmake](https://cmake.org) and ![sfml](https://www.sfml-dev.org) are required to build this project. To build, run the following commands:
+[cmake](https://cmake.org) and [sfml](https://www.sfml-dev.org) are required to build this project. To build, run the following commands:
 
 ```
 mkdir build
