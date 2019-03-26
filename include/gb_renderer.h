@@ -26,6 +26,9 @@ public:
     // Check if the window is still open or if it has been closed
     bool is_open();
 
+    // Close the window
+    void close();
+
     // Update should be called every V-blank
     // draw_framebuffer indicates whether to draw the current contents of the framebuffer or not
     // (depending on if the LCD is on or off)
@@ -37,7 +40,6 @@ private:
     sf::Texture      m_texture;
     sf::Sprite       m_sprite;
     gb_input         m_input;
-    bool             m_open;
 };
 
 #endif // GB_RENDERER_H_

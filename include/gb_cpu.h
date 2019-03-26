@@ -9,6 +9,7 @@
 #include "gb_memory_map.h"
 
 class gb_cpu {
+friend class gb_debugger;
 public:
     gb_cpu(gb_memory_map& memory_map);
     ~gb_cpu();

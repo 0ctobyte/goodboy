@@ -32,8 +32,17 @@ private:
     int                 m_nwin_cols;
     bool                m_continue;
 
+    void _update_pos();
+    void _clear_line(int line);
+    void _restore_window(int line);
+    void _handle_exception(const std::string& str, const std::exception& e, int from_line, int to_line);
+    void _print_prompt(const std::string& str, int line);
+    std::string _get_string(int line, int col);
+
     void _debugger_step_once();
     void _debugger_dump_registers();
+    void _debugger_modify_register();
+    void _debugger_access_memory();
     void _debugger_scroll_up_half_pg();
     void _debugger_scroll_dn_half_pg();
     void _debugger_scroll_up_full_pg();

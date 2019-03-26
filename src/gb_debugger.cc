@@ -1,9 +1,13 @@
 #include <streambuf>
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
 #include <stdexcept>
+#include <thread>
+#include <chrono>
 
 #include "gb_debugger.h"
+#include "gb_logger.h"
 
 class ncurses_buf : public std::streambuf {
 public:
@@ -46,6 +50,8 @@ ncurses_stream::~ncurses_stream() {
 {\
     {'n', std::bind(&gb_debugger::_debugger_step_once, this)},\
     {'r', std::bind(&gb_debugger::_debugger_dump_registers, this)},\
+    {'w', std::bind(&gb_debugger::_debugger_modify_register, this)},\
+    {'x', std::bind(&gb_debugger::_debugger_access_memory, this)},\
     {'u', std::bind(&gb_debugger::_debugger_scroll_up_half_pg, this)},\
     {'d', std::bind(&gb_debugger::_debugger_scroll_dn_half_pg, this)},\
     {'b', std::bind(&gb_debugger::_debugger_scroll_up_full_pg, this)},\
@@ -64,6 +70,7 @@ gb_debugger::gb_debugger(gb_emulator& emulator)
     // Enable blocking on getch()
     initscr();
     noecho();
+    cbreak();
     curs_set(false);
 
     m_nwin_lines = getmaxy(stdscr)-1;
@@ -99,17 +106,211 @@ void gb_debugger::go() {
         } catch (const std::out_of_range& oor) {}
 
         prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines-1, m_nwin_cols);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+}
+
+void gb_debugger::_update_pos() {
+    m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
+}
+
+void gb_debugger::_clear_line(int line) {
+    wmove(m_nwin, line, 0);
+    wclrtoeol(m_nwin);
+    prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines, m_nwin_cols);
+}
+
+void gb_debugger::_restore_window(int line) {
+    noecho();
+    cbreak();
+    nodelay(m_nwin, true);
+    wmove(m_nwin, line, 0);
+    _update_pos();
+}
+
+void gb_debugger::_handle_exception(const std::string& str, const std::exception& e, int from_line, int to_line) {
+    _clear_line(from_line);
+    GB_LOGGER(GB_LOG_FATAL) << str << " -- " << e.what() << std::endl;
+    prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines, m_nwin_cols);
+    for (int c = wgetch(m_nwin); c != '\n' && c != '\r'; c = wgetch(m_nwin));
+    _clear_line(from_line);
+    _restore_window(to_line);
+}
+
+void gb_debugger::_print_prompt(const std::string& str, int line) {
+    _clear_line(line);
+    wmove(m_nwin, line, 0);
+    GB_LOGGER(GB_LOG_TRACE) << str;
+    prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines, m_nwin_cols);
+}
+
+std::string gb_debugger::_get_string(int line, int col) {
+    std::string input;
+    nodelay(m_nwin, false);
+    wmove(m_nwin, line, col);
+    for (int c = wgetch(m_nwin); c != '\n' && c != '\r'; c = wgetch(m_nwin)) {
+        if (c == KEY_BACKSPACE || c == '\b' || c == 127) {
+            input.pop_back();
+            wdelch(m_nwin);
+            wmove(m_nwin, line, getcurx(m_nwin)-1);
+        } else {
+            input.push_back(static_cast<char>(c));
+            GB_LOGGER(GB_LOG_TRACE) << input.back();
+        }
+        prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines, m_nwin_cols);
+    }
+    nodelay(m_nwin, true);
+
+    return input;
 }
 
 void gb_debugger::_debugger_step_once() {
     m_emulator.step(1);
-    m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
+    _update_pos();
 }
 
 void gb_debugger::_debugger_dump_registers() {
     m_emulator.m_cpu.dump_registers();
-    m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
+    _update_pos();
+}
+
+void gb_debugger::_debugger_modify_register() {
+    // Get current Y and end-of-screen y
+    int cur_y = getcury(m_nwin);
+    int eos_y = std::max(m_nwin_lines, cur_y);
+
+    // Move to end of screen, clear it and print prompt
+    _print_prompt("Register: ", eos_y);
+
+    // Wait for input
+    std::string input = _get_string(eos_y, getcurx(m_nwin));
+
+    // Search for up to two substrings, the first is the register name and the second is the value to write to it
+    size_t pos = input.find_first_of('=', 0);
+    std::string reg;
+    uint16_t data = 0;
+    bool write = false;
+
+    try {
+        reg = input.substr(0, pos);
+        std::transform(reg.begin(), reg.end(), reg.begin(), ::tolower);
+    } catch (const std::exception& e) {
+        _handle_exception("gb_debugger::_debugger_modify_register()", e, eos_y, cur_y);
+        return;
+    }
+
+    if (pos != std::string::npos) {
+        try {
+            data = static_cast<uint16_t>(std::stoul(input.substr(pos+1), nullptr, 0));
+            write = true;
+        } catch (const std::exception& e) {
+            _handle_exception("gb_debugger::_debugger_modify_register()", e, eos_y, cur_y);
+            return;
+        }
+    }
+
+    // Clear line & restore window
+    _clear_line(eos_y);
+    _restore_window(cur_y);
+
+    auto do_reg = [data, write] (std::function<uint16_t()> get_reg, std::function<void()> set_reg) -> uint16_t {
+        uint16_t d = data;
+        if (write) set_reg();
+        else d = get_reg();
+        return d;
+    };
+
+    if (reg == "a") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_a, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_a, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "f") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_f, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_f, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "b") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_b, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_b, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "c") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_c, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_c, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "d") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_d, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_d, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "e") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_e, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_e, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "h") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_h, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_h, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "l") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_l, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_l, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "sp") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_sp, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_sp, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "pc") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_pc, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_pc, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "af") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_af, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_af, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "bc") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_bc, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_bc, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "de") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_de, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_de, &m_emulator.m_cpu, 0, data));
+    } else if (reg == "hl") {
+        data = do_reg(std::bind(&gb_cpu::_operand_get_register_hl, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_hl, &m_emulator.m_cpu, 0, data));
+    } else {
+        _handle_exception("gb_debugger::_debugger_modify_register()", std::runtime_error("Unknown register"), eos_y, cur_y);
+        return;
+    }
+
+    // Read or write data to a register
+    if (write) GB_LOGGER(GB_LOG_TRACE) << "write: ";
+    else GB_LOGGER(GB_LOG_TRACE) << "read: ";
+
+    GB_LOGGER(GB_LOG_TRACE) << reg << " = " << "0x" << std::setfill('0') << std::setw(4) << std::hex << data << std::endl;
+    _update_pos();
+}
+
+void gb_debugger::_debugger_access_memory() {
+    // Get current Y and end-of-screen y
+    int cur_y = getcury(m_nwin);
+    int eos_y = std::max(m_nwin_lines, cur_y);
+
+    // Move to end of screen, clear it and print prompt
+    _print_prompt("Address: ", eos_y);
+
+    // Wait for address input
+    std::string input = _get_string(eos_y, getcurx(m_nwin));
+
+    // Search for up to two substrings, the first is the address and the second is the
+    // optional data to write to the address separated by a '='
+    size_t pos = input.find_first_of('=', 0);
+    unsigned long addr = 0;
+    unsigned long data = 0;
+    bool write = false;
+
+    try {
+        addr = std::stoul(input.substr(0, pos), nullptr, 0);
+    } catch (const std::exception& e) {
+        _handle_exception("gb_debugger::_debugger_access_memory()", e, eos_y, cur_y);
+        return;
+    }
+
+    if (pos != std::string::npos) {
+        try {
+            data = std::stoul(input.substr(pos+1), nullptr, 0);
+            write = true;
+        } catch (const std::exception& e) {
+            _handle_exception("gb_debugger::_debugger_access_memory()", e, eos_y, cur_y);
+            return;
+        }
+    }
+
+    // Clear line & restore window
+    _clear_line(eos_y);
+    _restore_window(cur_y);
+
+    // Read or write data to memory
+    if (write) {
+        m_emulator.m_memory_map.write_byte(static_cast<uint16_t>(addr), static_cast<uint8_t>(data));
+        GB_LOGGER(GB_LOG_TRACE) << "write: ";
+    } else {
+        data = m_emulator.m_memory_map.read_byte(static_cast<uint16_t>(addr));
+        GB_LOGGER(GB_LOG_TRACE) << "read: ";
+    }
+
+    GB_LOGGER(GB_LOG_TRACE) << "0x" << std::setfill('0') << std::setw(4) << std::hex << addr << " = " << "0x" << std::setfill('0') << std::setw(2) << std::hex << data << std::endl;
+    _update_pos();
 }
 
 void gb_debugger::_debugger_scroll_up_half_pg() {
