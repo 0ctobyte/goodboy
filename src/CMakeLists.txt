@@ -1,4 +1,4 @@
-target_sources(gb_emulator
+target_sources(goodboy
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_cpu
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_emulator
