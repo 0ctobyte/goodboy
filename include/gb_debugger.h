@@ -35,13 +35,13 @@ private:
     int                 m_frame_cycles;
     bool                m_continue;
 
-    void _update_pos();
-    void _clear_line(int line);
-    void _restore_window(int line);
-    void _print_line(const std::string& str, int line);
-    void _wait_newline(int line);
-    void _handle_exception(const std::string& str, const std::exception& e, int from_line, int to_line);
-    std::string _get_string(int line, int col);
+    void update_pos();
+    void clear_line(int line);
+    void restore_window(int line);
+    void print_line(const std::string& str, int line);
+    void wait_newline(int line);
+    void handle_exception(const std::string& str, const std::exception& e, int from_line, int to_line);
+    std::string get_string(int line, int col);
 
     void _debugger_help();
     void _debugger_step_once();
@@ -49,6 +49,7 @@ private:
     void _debugger_modify_register();
     void _debugger_access_memory();
     void _debugger_breakpoints();
+    void _debugger_save_trace();
     void _debugger_scroll_up_half_pg();
     void _debugger_scroll_dn_half_pg();
     void _debugger_scroll_to_start();
