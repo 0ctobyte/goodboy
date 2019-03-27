@@ -109,6 +109,7 @@ gb_debugger::gb_debugger(gb_emulator& emulator)
     nodelay(m_nwin, true);
     keypad(m_nwin, true);
     scrollok(m_nwin, true);
+    idlok(m_nwin, true);
     prefresh(m_nwin, 0, 0, 0, 0, m_nwin_lines, m_nwin_cols);
 
     // Save the cout stream and replace it with a custom one that works with ncurses
@@ -143,7 +144,6 @@ void gb_debugger::go() {
             key_handler();
         } catch (const std::out_of_range& oor) {}
 
-        update_pos();
         prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines-1, m_nwin_cols);
 
         if (m_frame_cycles >= 70224) {
@@ -230,6 +230,7 @@ void gb_debugger::_debugger_help() {
     // Clear lines & restore window
     for (size_t i = 0; i < m_command_doc.size(); i++) clear_line(eos_y+static_cast<int>(i));
     restore_window(cur_y);
+    update_pos();
 }
 
 void gb_debugger::_debugger_step_once() {
@@ -242,10 +243,12 @@ void gb_debugger::_debugger_step_once() {
         gb_logger::instance().enable_tracing(true);
         GB_LOGGER(GB_LOG_TRACE) << bp.what() << std::endl;
     }
+    update_pos();
 }
 
 void gb_debugger::_debugger_dump_registers() {
     m_emulator.m_cpu.dump_registers();
+    update_pos();
 }
 
 void gb_debugger::_debugger_modify_register() {
@@ -332,6 +335,7 @@ void gb_debugger::_debugger_modify_register() {
     else GB_LOGGER(GB_LOG_TRACE) << "read: ";
 
     GB_LOGGER(GB_LOG_TRACE) << reg << " = " << "0x" << std::setfill('0') << std::setw(4) << std::hex << data << std::endl;
+    update_pos();
 }
 
 void gb_debugger::_debugger_access_memory() {
@@ -382,6 +386,7 @@ void gb_debugger::_debugger_access_memory() {
     }
 
     GB_LOGGER(GB_LOG_TRACE) << "0x" << std::setfill('0') << std::setw(4) << std::hex << addr << " = " << "0x" << std::setfill('0') << std::setw(2) << std::hex << data << std::endl;
+    update_pos();
 }
 
 void gb_debugger::_debugger_breakpoints() {
@@ -442,6 +447,7 @@ void gb_debugger::_debugger_breakpoints() {
     // Clear line & restore window
     clear_line(eos_y);
     restore_window(cur_y);
+    update_pos();
 }
 
 void gb_debugger::_debugger_save_trace() {
@@ -477,6 +483,7 @@ void gb_debugger::_debugger_save_trace() {
     // Clear line & restore window
     clear_line(eos_y);
     restore_window(cur_y);
+    update_pos();
 }
 
 void gb_debugger::_debugger_scroll_up_half_pg() {
