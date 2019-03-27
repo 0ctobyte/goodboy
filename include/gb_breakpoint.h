@@ -9,11 +9,14 @@
 class gb_breakpoint_exception : public std::exception {
 public:
     gb_breakpoint_exception(unsigned int bp);
+    gb_breakpoint_exception(unsigned int bp, int cycles);
 
     virtual char const * what() const noexcept;
+    int get_last_cycle_count() const noexcept;
 
 private:
     std::string m_msg;
+    int         m_last_cycle_count;
 };
 
 // This class provides routines to add/remove and check if a breakpoint was hit
@@ -30,6 +33,12 @@ public:
 
     // Remove all breakpoints
     void clear();
+
+    // Given a value and N cycles, check if the value matches any of the registered breakpoints.
+    // If so this will throw an exception of type gb_breakpoint_exception with the cycle count.
+    // This is useful for the debugger to keep an accurate cycle count since the exception will be thrown
+    // before the CPU returns the cycle count of the previous instruction to the breakpoint
+    void match(unsigned int val, int cycles);
 
     // Given a value, check if it matches any of the registered breakpoints.
     // If so this will throw an exception of type gb_breakpoint_exception

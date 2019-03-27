@@ -125,6 +125,8 @@ void gb_debugger::go() {
             try {
                 m_frame_cycles += m_emulator.step(1000);
             } catch (const gb_breakpoint_exception& bp) {
+                // Update cycle count from instruction prior to breakpoint
+                m_frame_cycles += bp.get_last_cycle_count();
                 m_continue = false;
                 gb_logger::instance().enable_tracing(true);
                 GB_LOGGER(GB_LOG_TRACE) << bp.what() << std::endl;
@@ -229,6 +231,8 @@ void gb_debugger::_debugger_step_once() {
     try {
         m_frame_cycles += m_emulator.step(4);
     } catch (const gb_breakpoint_exception& bp) {
+        // Update cycle count from instruction prior to breakpoint
+        m_frame_cycles += bp.get_last_cycle_count();
         m_continue = false;
         gb_logger::instance().enable_tracing(true);
         GB_LOGGER(GB_LOG_TRACE) << bp.what() << std::endl;
