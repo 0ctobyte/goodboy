@@ -95,7 +95,7 @@ int gb_cpu::step() {
     int cycles = instruction.op_exec(instruction);
 
     // Check for breakpoints
-    if (m_bp_enabled) m_bp.match_breakpoint(m_registers.pc);
+    if (m_bp_enabled) m_bp.match(m_registers.pc);
 
     return cycles;
 }

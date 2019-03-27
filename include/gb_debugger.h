@@ -16,7 +16,6 @@ public:
     ~gb_debugger();
 
     void go();
-    void breakpoint_callback(unsigned int bp);
 
 private:
     using key_handler_t      = std::function<void()>;
@@ -33,6 +32,7 @@ private:
     int                 m_nwin_max_lines;
     int                 m_nwin_lines;
     int                 m_nwin_cols;
+    int                 m_frame_cycles;
     bool                m_continue;
 
     void _update_pos();

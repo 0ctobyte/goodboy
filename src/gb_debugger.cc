@@ -8,6 +8,7 @@
 #include <chrono>
 
 #include "gb_debugger.h"
+#include "gb_io_defs.h"
 #include "gb_logger.h"
 
 class ncurses_buf : public std::streambuf {
@@ -87,7 +88,8 @@ ncurses_stream::~ncurses_stream() {
 #define GB_DEBUGGER_WAIT_MS (50)
 
 gb_debugger::gb_debugger(gb_emulator& emulator)
-    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_command_doc(COMMAND_DOC_LIST), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0)
+    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_command_doc(COMMAND_DOC_LIST), m_nwin_pos(0), m_nwin_max_lines(10000), m_nwin_lines(0), m_nwin_cols(0),
+      m_frame_cycles(0), m_continue(false)
 {
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
@@ -118,9 +120,15 @@ gb_debugger::~gb_debugger() {
 }
 
 void gb_debugger::go() {
-    for(int c = wgetch(m_nwin); c != 'q'; c = wgetch(m_nwin)) {
+    for(int c = wgetch(m_nwin); c != 'q' && m_emulator.m_renderer.is_open(); c = wgetch(m_nwin)) {
         if (m_continue) {
-            _debugger_step_once();
+            try {
+                m_frame_cycles += m_emulator.step(1000);
+            } catch (const gb_breakpoint_exception& bp) {
+                m_continue = false;
+                gb_logger::instance().enable_tracing(true);
+                GB_LOGGER(GB_LOG_TRACE) << bp.what() << std::endl;
+            }
         }
 
         try {
@@ -128,16 +136,16 @@ void gb_debugger::go() {
             key_handler();
         } catch (const std::out_of_range& oor) {}
 
+        _update_pos();
         prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines-1, m_nwin_cols);
+
+        if (m_frame_cycles >= 70224) {
+            m_frame_cycles = 0;
+            m_emulator.m_renderer.update(((m_emulator.m_memory_map.read_byte(GB_LCDC_ADDR) & 0x80) != 0));
+        }
+
         if (!m_continue) std::this_thread::sleep_for(std::chrono::milliseconds(GB_DEBUGGER_WAIT_MS));
     }
-}
-
-void gb_debugger::breakpoint_callback(unsigned int bp) {
-    m_continue = false;
-    gb_logger::instance().enable_tracing(true);
-    GB_LOGGER(GB_LOG_TRACE) << "Breakpoint hit: " << "0x" << std::hex << std::setfill('0') << std::setw(4) << bp << std::endl;
-    _update_pos();
 }
 
 void gb_debugger::_update_pos() {
@@ -155,7 +163,6 @@ void gb_debugger::_restore_window(int line) {
     cbreak();
     nodelay(m_nwin, true);
     wmove(m_nwin, line, 0);
-    _update_pos();
 }
 
 void gb_debugger::_print_line(const std::string& str, int line) {
@@ -216,17 +223,20 @@ void gb_debugger::_debugger_help() {
     // Clear lines & restore window
     for (size_t i = 0; i < m_command_doc.size(); i++) _clear_line(eos_y+static_cast<int>(i));
     _restore_window(cur_y);
-    _update_pos();
 }
 
 void gb_debugger::_debugger_step_once() {
-    m_emulator.step(1);
-    _update_pos();
+    try {
+        m_frame_cycles += m_emulator.step(4);
+    } catch (const gb_breakpoint_exception& bp) {
+        m_continue = false;
+        gb_logger::instance().enable_tracing(true);
+        GB_LOGGER(GB_LOG_TRACE) << bp.what() << std::endl;
+    }
 }
 
 void gb_debugger::_debugger_dump_registers() {
     m_emulator.m_cpu.dump_registers();
-    _update_pos();
 }
 
 void gb_debugger::_debugger_modify_register() {
@@ -313,7 +323,6 @@ void gb_debugger::_debugger_modify_register() {
     else GB_LOGGER(GB_LOG_TRACE) << "read: ";
 
     GB_LOGGER(GB_LOG_TRACE) << reg << " = " << "0x" << std::setfill('0') << std::setw(4) << std::hex << data << std::endl;
-    _update_pos();
 }
 
 void gb_debugger::_debugger_access_memory() {
@@ -364,7 +373,6 @@ void gb_debugger::_debugger_access_memory() {
     }
 
     GB_LOGGER(GB_LOG_TRACE) << "0x" << std::setfill('0') << std::setw(4) << std::hex << addr << " = " << "0x" << std::setfill('0') << std::setw(2) << std::hex << data << std::endl;
-    _update_pos();
 }
 
 void gb_debugger::_debugger_breakpoints() {
@@ -400,7 +408,7 @@ void gb_debugger::_debugger_breakpoints() {
         std::ostringstream sstr;
         sstr << "Active breakpoints: ";
         for (auto bp : m_emulator.m_cpu.m_bp.m_breakpoints) {
-            sstr << "0x" << std::hex << std::setfill('0') << std::setw(4) << bp.first << ", ";
+            sstr << "0x" << std::hex << std::setfill('0') << std::setw(4) << bp << ", ";
         }
         _print_line(sstr.str(), eos_y);
         _wait_newline(eos_y+1);
@@ -408,14 +416,13 @@ void gb_debugger::_debugger_breakpoints() {
 
     if (tokens.size() == 0) {
     } else if (tokens[0] == "set" && _try_strtoul()) {
-        gb_breakpoint_callback_func_t callback_func = std::bind(&gb_debugger::breakpoint_callback, this, std::placeholders::_1);
-        m_emulator.m_cpu.m_bp.add_breakpoint(data, callback_func);
+        m_emulator.m_cpu.m_bp.add(data);
         m_emulator.m_cpu.m_bp_enabled = true;
     } else if (tokens[0] == "del" && _try_strtoul()) {
-        m_emulator.m_cpu.m_bp.remove_breakpoint(data);
+        m_emulator.m_cpu.m_bp.remove(data);
         m_emulator.m_cpu.m_bp_enabled = (m_emulator.m_cpu.m_bp.m_breakpoints.size() != 0);
     } else if (tokens[0] == "clear") {
-        m_emulator.m_cpu.m_bp.clear_breakpoints();
+        m_emulator.m_cpu.m_bp.clear();
         m_emulator.m_cpu.m_bp_enabled = false;
     } else if (tokens[0] == "list") {
         _print_breakpoints();
@@ -426,7 +433,6 @@ void gb_debugger::_debugger_breakpoints() {
     // Clear line & restore window
     _clear_line(eos_y);
     _restore_window(cur_y);
-    _update_pos();
 }
 
 void gb_debugger::_debugger_scroll_up_half_pg() {

@@ -18,7 +18,7 @@ public:
     ~gb_emulator();
 
     void load_rom(const std::string& rom_filename);
-    void step(int num_cycles);
+    int step(int num_cycles);
     void go();
 
 protected:

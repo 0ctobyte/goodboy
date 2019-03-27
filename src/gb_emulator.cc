@@ -119,7 +119,7 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     m_memory_map.add_writeable_device(m_dma, std::get<0>(addr_range), std::get<1>(addr_range));
 }
 
-void gb_emulator::step(const int num_cycles) {
+int gb_emulator::step(const int num_cycles) {
     int step_cycles = 0;
     while (step_cycles < num_cycles) {
         int cycles = m_cpu.step();
@@ -128,6 +128,8 @@ void gb_emulator::step(const int num_cycles) {
         m_dma->update(cycles);
         step_cycles += cycles;
     }
+
+    return step_cycles;
 }
 
 void gb_emulator::go() {
