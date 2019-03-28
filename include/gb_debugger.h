@@ -4,11 +4,12 @@
 #include <unordered_map>
 #include <functional>
 
-#include <ncurses.h>
-
 #include "gb_emulator.h"
 
 class ncurses_stream;
+class gb_pad;
+
+using gb_pad_ptr = std::unique_ptr<gb_pad>;
 
 class gb_debugger {
 public:
@@ -27,21 +28,9 @@ private:
     const key_map_t     m_key_map;
     const command_doc_t m_command_doc;
     ncurses_stream_ptr  m_nstream;
-    WINDOW*             m_nwin;
-    int                 m_nwin_pos;
-    int                 m_nwin_max_lines;
-    int                 m_nwin_lines;
-    int                 m_nwin_cols;
+    gb_pad_ptr          m_pad;
     int                 m_frame_cycles;
     bool                m_continue;
-
-    void update_pos();
-    void clear_line(int line);
-    void restore_window(int line);
-    void print_line(const std::string& str, int line);
-    void wait_newline(int line);
-    void handle_exception(const std::string& str, const std::exception& e, int from_line, int to_line);
-    std::string get_string(int line, int col);
 
     void _debugger_help();
     void _debugger_step_once();

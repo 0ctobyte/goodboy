@@ -8,50 +8,11 @@
 #include <thread>
 #include <chrono>
 
+#include <ncurses.h>
+
 #include "gb_debugger.h"
 #include "gb_io_defs.h"
 #include "gb_logger.h"
-
-class ncurses_buf : public std::streambuf {
-public:
-    WINDOW* m_win;
-
-    ncurses_buf() {}
-    ~ncurses_buf() {}
-
-    void setWindow(WINDOW* new_win) {
-        m_win = new_win;
-    }
-    virtual int overflow(int c);
-};
-
-int ncurses_buf::overflow(int c) {
-    wprintw(m_win, "%c", c);
-    return c;
-}
-
-class ncurses_stream : public std::ostream {
-public:
-    ncurses_buf m_tbuf;
-    std::ostream &m_src;
-    std::streambuf* const m_srcbuf;
-
-    ncurses_stream(std::ostream &o, WINDOW* win)
-        : std::ostream(&m_tbuf), m_src(o), m_srcbuf(o.rdbuf()) {
-        o.rdbuf(rdbuf());
-        m_tbuf.setWindow(win);
-    }
-
-    ~ncurses_stream();
-};
-
-ncurses_stream::~ncurses_stream() {
-    m_src.rdbuf(m_srcbuf);
-}
-
-#define GB_DEBUGGER_WAIT_MS            (50)
-#define GB_DEBUGGER_NWIN_MAX_LINES     (10000)
-#define GB_DEBUGGER_NWIN_MAX_LINES_STR "10000"
 
 #define COMMAND_DOC_LIST \
 {\
@@ -86,47 +47,157 @@ ncurses_stream::~ncurses_stream() {
     {'s', std::bind(&gb_debugger::_debugger_save_trace, this)},\
     {'u', std::bind(&gb_debugger::_debugger_scroll_up_half_pg, this)},\
     {'d', std::bind(&gb_debugger::_debugger_scroll_dn_half_pg, this)},\
-    {'G', std::bind(&gb_debugger::_debugger_scroll_to_start, this)},\
-    {'g', std::bind(&gb_debugger::_debugger_scroll_to_end, this)},\
+    {'g', std::bind(&gb_debugger::_debugger_scroll_to_start, this)},\
+    {'G', std::bind(&gb_debugger::_debugger_scroll_to_end, this)},\
     {KEY_UP, std::bind(&gb_debugger::_debugger_scroll_up_one_line, this)},\
     {KEY_DOWN, std::bind(&gb_debugger::_debugger_scroll_dn_one_line, this)}\
 }
 
+#define GB_DEBUGGER_WAIT_MS            (50)
+#define GB_DEBUGGER_NWIN_MAX_LINES     (10000)
+#define GB_DEBUGGER_NWIN_MAX_LINES_STR "10000"
+
+class ncurses_buf : public std::streambuf {
+public:
+    WINDOW* m_win;
+
+    ncurses_buf() {}
+    ~ncurses_buf() {}
+
+    void set_window(WINDOW* new_win) {
+        m_win = new_win;
+    }
+    virtual int overflow(int c);
+};
+
+int ncurses_buf::overflow(int c) {
+    wprintw(m_win, "%c", c);
+    return c;
+}
+
+class ncurses_stream : public std::ostream {
+public:
+    ncurses_buf m_tbuf;
+    std::ostream &m_src;
+    std::streambuf* const m_srcbuf;
+
+    ncurses_stream(std::ostream &o, WINDOW* win)
+        : std::ostream(&m_tbuf), m_src(o), m_srcbuf(o.rdbuf()) {
+        o.rdbuf(rdbuf());
+        m_tbuf.set_window(win);
+    }
+
+    ~ncurses_stream();
+};
+
+ncurses_stream::~ncurses_stream() {
+    m_src.rdbuf(m_srcbuf);
+}
+
+class gb_pad {
+public:
+    bool         m_display_from_bottom;
+    int          m_pos;
+    WINDOW*      m_win;
+    WINDOW*      m_parent_win;
+    ncurses_buf& m_nbuf;
+
+    gb_pad(WINDOW* parent_win, ncurses_buf& nbuf);
+    ~gb_pad();
+
+    void update_scroll();
+    int y_pos();
+    void refresh();
+    void wait();
+    std::string get_string();
+};
+
+gb_pad::gb_pad(WINDOW* parent_win, ncurses_buf& nbuf)
+    : m_display_from_bottom(false), m_pos(0), m_parent_win(parent_win), m_nbuf(nbuf)
+{
+    m_win = newpad(GB_DEBUGGER_NWIN_MAX_LINES, getmaxx(stdscr));
+    m_nbuf.set_window(m_win);
+
+    nodelay(m_win, true);
+    keypad(m_win, true);
+    scrollok(m_win, true);
+}
+
+gb_pad::~gb_pad() {
+    m_nbuf.set_window(m_parent_win);
+    if (m_win) delwin(m_win);
+}
+
+void gb_pad::update_scroll() {
+    m_pos = std::max(getcury(m_win)-getmaxy(stdscr)+1, m_pos);
+}
+
+int gb_pad::y_pos() {
+    return (m_display_from_bottom ? (getmaxy(stdscr) - 1 - getcury(m_win)) : 0);
+}
+
+void gb_pad::refresh() {
+    int max_lines = getmaxy(stdscr)-1;
+    int max_cols = getmaxx(stdscr);
+    prefresh(m_win, m_pos, 0, y_pos(), 0, max_lines, max_cols);
+}
+
+void gb_pad::wait() {
+    GB_LOGGER(GB_LOG_FATAL) << "Press ENTER to continue...";
+    refresh();
+    for (int c = wgetch(m_win); c != '\n' && c != '\r'; c = wgetch(m_win)) std::this_thread::sleep_for(std::chrono::milliseconds(GB_DEBUGGER_WAIT_MS));
+    wmove(m_win, getcury(m_win), 0);
+    wclrtoeol(m_win);
+    refresh();
+}
+
+std::string gb_pad::get_string() {
+    std::string input;
+    nodelay(m_win, false);
+    for (int c = wgetch(m_win), y = getcury(m_win), x = getcurx(m_win), cur_x = x; c != '\n' && c != '\r'; c = wgetch(m_win), cur_x = getcurx(m_win)) {
+        if (c == KEY_BACKSPACE || c == '\b' || c == 127) {
+            wdelch(m_win);
+            if (cur_x > x) {
+                wmove(m_win, y, cur_x-1);
+                input.pop_back();
+            }
+        } else {
+            input.push_back(static_cast<char>(c));
+            GB_LOGGER(GB_LOG_TRACE) << input.back();
+        }
+        refresh();
+    }
+    GB_LOGGER(GB_LOG_TRACE) << std::endl;
+    refresh();
+    nodelay(m_win, true);
+    return input;
+}
+
 gb_debugger::gb_debugger(gb_emulator& emulator)
-    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_command_doc(COMMAND_DOC_LIST), m_nwin_pos(0),
-      m_nwin_max_lines(GB_DEBUGGER_NWIN_MAX_LINES), m_nwin_lines(0), m_nwin_cols(0), m_frame_cycles(0), m_continue(false)
+    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_command_doc(COMMAND_DOC_LIST), m_frame_cycles(0), m_continue(false)
 {
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
-    initscr();
+    WINDOW* scr = initscr();
     noecho();
     cbreak();
     curs_set(false);
 
-    m_nwin_lines = getmaxy(stdscr)-1;
-    m_nwin_cols = getmaxx(stdscr);
-    m_nwin = newpad(m_nwin_max_lines, m_nwin_cols);
-    nodelay(m_nwin, true);
-    keypad(m_nwin, true);
-    scrollok(m_nwin, true);
-    idlok(m_nwin, true);
-    prefresh(m_nwin, 0, 0, 0, 0, m_nwin_lines, m_nwin_cols);
-
     // Save the cout stream and replace it with a custom one that works with ncurses
     // https://stackoverflow.com/questions/20126649/ncurses-and-ostream-class-method
-    m_nstream = std::make_unique<ncurses_stream>(std::cout, m_nwin);
+    m_nstream = std::make_unique<ncurses_stream>(std::cout, scr);
+
+    m_pad = std::make_unique<gb_pad>(scr, m_nstream->m_tbuf);
+    m_pad->refresh();
 }
 
 gb_debugger::~gb_debugger() {
     // Close the ncurses library
-    if (m_nwin != nullptr) {
-        delwin(m_nwin);
-        endwin();
-    }
+    endwin();
 }
 
 void gb_debugger::go() {
-    for(int c = wgetch(m_nwin); c != 'q' && m_emulator.m_renderer.is_open(); c = wgetch(m_nwin)) {
+    for(int c = wgetch(m_pad->m_win); c != 'q' && m_emulator.m_renderer.is_open(); c = wgetch(m_pad->m_win)) {
         if (m_continue) {
             try {
                 m_frame_cycles += m_emulator.step(1000);
@@ -137,6 +208,7 @@ void gb_debugger::go() {
                 gb_logger::instance().enable_tracing(true);
                 GB_LOGGER(GB_LOG_TRACE) << bp.what() << std::endl;
             }
+            m_pad->update_scroll();
         }
 
         try {
@@ -144,7 +216,7 @@ void gb_debugger::go() {
             key_handler();
         } catch (const std::out_of_range& oor) {}
 
-        prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines-1, m_nwin_cols);
+        m_pad->refresh();
 
         if (m_frame_cycles >= 70224) {
             m_frame_cycles = 0;
@@ -155,82 +227,16 @@ void gb_debugger::go() {
     }
 }
 
-void gb_debugger::update_pos() {
-    m_nwin_pos = std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos);
-}
-
-void gb_debugger::clear_line(int line) {
-    wmove(m_nwin, line, 0);
-    wclrtoeol(m_nwin);
-    prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines, m_nwin_cols);
-}
-
-void gb_debugger::restore_window(int line) {
-    noecho();
-    cbreak();
-    nodelay(m_nwin, true);
-    wmove(m_nwin, line, 0);
-}
-
-void gb_debugger::print_line(const std::string& str, int line) {
-    clear_line(line);
-    wmove(m_nwin, line, 0);
-    GB_LOGGER(GB_LOG_TRACE) << str;
-    prefresh(m_nwin, std::max(getcury(m_nwin)-m_nwin_lines, m_nwin_pos), 0, 0, 0, m_nwin_lines, m_nwin_cols);
-}
-
-void gb_debugger::wait_newline(int line) {
-    print_line("Press ENTER to continue...", line);
-    for (int c = wgetch(m_nwin); c != '\n' && c != '\r'; c = wgetch(m_nwin)) std::this_thread::sleep_for(std::chrono::milliseconds(GB_DEBUGGER_WAIT_MS));
-    clear_line(line);
-}
-
-void gb_debugger::handle_exception(const std::string& str, const std::exception& e, int from_line, int to_line) {
-    print_line(str + " -- " + e.what(), from_line);
-    wait_newline(from_line+1);
-    clear_line(from_line);
-    restore_window(to_line);
-}
-
-
-std::string gb_debugger::get_string(int line, int col) {
-    std::string input;
-    nodelay(m_nwin, false);
-    wmove(m_nwin, line, col);
-    for (int c = wgetch(m_nwin); c != '\n' && c != '\r'; c = wgetch(m_nwin)) {
-        if (c == KEY_BACKSPACE || c == '\b' || c == 127) {
-            input.pop_back();
-            wdelch(m_nwin);
-            wmove(m_nwin, line, getcurx(m_nwin)-1);
-        } else {
-            input.push_back(static_cast<char>(c));
-            GB_LOGGER(GB_LOG_TRACE) << input.back();
-        }
-        prefresh(m_nwin, m_nwin_pos, 0, 0, 0, m_nwin_lines, m_nwin_cols);
-    }
-    nodelay(m_nwin, true);
-
-    return input;
-}
-
 void gb_debugger::_debugger_help() {
-    // Get current Y and end-of-screen y
-    int cur_y = getcury(m_nwin);
-    int eos_y = std::max(m_nwin_lines, cur_y);
+    gb_pad pad (m_pad->m_win, m_nstream->m_tbuf);
+    pad.m_display_from_bottom = true;
 
     // Go through command documentation and print it starting at eos_y
     for (const std::array<std::string, 2>& command : m_command_doc) {
-        long i = &command - &m_command_doc[0];
-        print_line(command[0] + "\t- " + command[1], eos_y + static_cast<int>(i));
+        GB_LOGGER(GB_LOG_TRACE) << command[0] << "\t-" << command[1] << std::endl;
     }
 
-    // Wait for enter
-    wait_newline(eos_y + static_cast<int>(m_command_doc.size()));
-
-    // Clear lines & restore window
-    for (size_t i = 0; i < m_command_doc.size(); i++) clear_line(eos_y+static_cast<int>(i));
-    restore_window(cur_y);
-    update_pos();
+    pad.wait();
 }
 
 void gb_debugger::_debugger_step_once() {
@@ -243,91 +249,94 @@ void gb_debugger::_debugger_step_once() {
         gb_logger::instance().enable_tracing(true);
         GB_LOGGER(GB_LOG_TRACE) << bp.what() << std::endl;
     }
-    update_pos();
+
+    m_pad->update_scroll();
 }
 
 void gb_debugger::_debugger_dump_registers() {
     m_emulator.m_cpu.dump_registers();
-    update_pos();
+    m_pad->update_scroll();
 }
 
 void gb_debugger::_debugger_modify_register() {
-    // Get current Y and end-of-screen y
-    int cur_y = getcury(m_nwin);
-    int eos_y = std::max(m_nwin_lines, cur_y);
-
-    // Move to end of screen, clear it and print prompt
-    print_line("Register: ", eos_y);
-
-    // Wait for input
-    std::string input = get_string(eos_y, getcurx(m_nwin));
-
-    // Search for up to two substrings, the first is the register name and the second is the value to write to it
-    size_t pos = input.find_first_of('=', 0);
     std::string reg;
     uint16_t data = 0;
-    bool write = (pos != std::string::npos) ? true : false;
+    bool write = false;
 
-    try {
-        reg = input.substr(0, pos);
-        reg.erase(std::remove_if(reg.begin(), reg.end(), [] (char c) { return std::isspace(c); }), reg.end());
-        std::transform(reg.begin(), reg.end(), reg.begin(), ::tolower);
-    } catch (const std::exception& e) {
-        handle_exception("gb_debugger::_debugger_modify_register()", e, eos_y, cur_y);
-        return;
-    }
+    {
+        gb_pad pad (m_pad->m_win, m_nstream->m_tbuf);
+        pad.m_display_from_bottom = true;
 
-    if (write) {
+        GB_LOGGER(GB_LOG_TRACE) << "Register: ";
+        pad.refresh();
+
+        // Wait for input
+        std::string input = pad.get_string();
+
+        // Search for up to two substrings, the first is the register name and the second is the value to write to it
+        size_t pos = input.find_first_of('=', 0);
+        write = (pos != std::string::npos) ? true : false;
+
         try {
-            data = static_cast<uint16_t>(std::stoul(input.substr(pos+1), nullptr, 0));
+            reg = input.substr(0, pos);
+            reg.erase(std::remove_if(reg.begin(), reg.end(), [] (char c) { return std::isspace(c); }), reg.end());
+            std::transform(reg.begin(), reg.end(), reg.begin(), ::tolower);
         } catch (const std::exception& e) {
-            handle_exception("gb_debugger::_debugger_modify_register()", e, eos_y, cur_y);
+            GB_LOGGER(GB_LOG_FATAL) << "gb_debugger::_debugger_modify_register() -- " << e.what() << std::endl;
+            pad.wait();
             return;
         }
-    }
 
-    // Clear line & restore window
-    clear_line(eos_y);
-    restore_window(cur_y);
+        if (write) {
+            try {
+                data = static_cast<uint16_t>(std::stoul(input.substr(pos+1), nullptr, 0));
+            } catch (const std::exception& e) {
+                GB_LOGGER(GB_LOG_FATAL) << "gb_debugger::_debugger_modify_register() -- " << e.what() << std::endl;
+                pad.wait();
+                return;
+            }
+        }
 
-    auto do_reg = [data, write] (std::function<uint16_t()> get_reg, std::function<void()> set_reg) -> uint16_t {
-        uint16_t d = data;
-        if (write) set_reg();
-        else d = get_reg();
-        return d;
-    };
+        auto do_reg = [data, write] (std::function<uint16_t()> get_reg, std::function<void()> set_reg) -> uint16_t {
+            uint16_t d = data;
+            if (write) set_reg();
+            else d = get_reg();
+            return d;
+        };
 
-    if (reg == "a") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_a, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_a, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "f") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_f, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_f, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "b") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_b, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_b, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "c") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_c, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_c, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "d") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_d, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_d, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "e") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_e, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_e, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "h") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_h, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_h, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "l") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_l, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_l, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "sp") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_sp, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_sp, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "pc") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_pc, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_pc, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "af") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_af, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_af, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "bc") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_bc, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_bc, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "de") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_de, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_de, &m_emulator.m_cpu, 0, data));
-    } else if (reg == "hl") {
-        data = do_reg(std::bind(&gb_cpu::_operand_get_register_hl, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_hl, &m_emulator.m_cpu, 0, data));
-    } else {
-        handle_exception("gb_debugger::_debugger_modify_register()", std::runtime_error("Unknown register"), eos_y, cur_y);
-        return;
+        if (reg == "a") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_a, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_a, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "f") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_f, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_f, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "b") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_b, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_b, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "c") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_c, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_c, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "d") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_d, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_d, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "e") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_e, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_e, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "h") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_h, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_h, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "l") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_l, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_l, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "sp") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_sp, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_sp, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "pc") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_pc, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_pc, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "af") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_af, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_af, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "bc") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_bc, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_bc, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "de") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_de, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_de, &m_emulator.m_cpu, 0, data));
+        } else if (reg == "hl") {
+            data = do_reg(std::bind(&gb_cpu::_operand_get_register_hl, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_hl, &m_emulator.m_cpu, 0, data));
+        } else {
+            GB_LOGGER(GB_LOG_FATAL) << "gb_debugger::_debugger_modify_register() -- Unknown register: " << reg << std::endl;
+            pad.wait();
+            return;
+        }
     }
 
     // Read or write data to a register
@@ -335,46 +344,47 @@ void gb_debugger::_debugger_modify_register() {
     else GB_LOGGER(GB_LOG_TRACE) << "read: ";
 
     GB_LOGGER(GB_LOG_TRACE) << reg << " = " << "0x" << std::setfill('0') << std::setw(4) << std::hex << data << std::endl;
-    update_pos();
+    m_pad->update_scroll();
 }
 
 void gb_debugger::_debugger_access_memory() {
-    // Get current Y and end-of-screen y
-    int cur_y = getcury(m_nwin);
-    int eos_y = std::max(m_nwin_lines, cur_y);
-
-    // Move to end of screen, clear it and print prompt
-    print_line("Address: ", eos_y);
-
-    // Wait for address input
-    std::string input = get_string(eos_y, getcurx(m_nwin));
-
-    // Search for up to two substrings, the first is the address and the second is the
-    // optional data to write to the address separated by a '='
-    size_t pos = input.find_first_of('=', 0);
     unsigned long addr = 0;
     unsigned long data = 0;
-    bool write = (pos != std::string::npos) ? true : false;
+    bool write = false;
 
-    try {
-        addr = std::stoul(input.substr(0, pos), nullptr, 0);
-    } catch (const std::exception& e) {
-        handle_exception("gb_debugger::_debugger_access_memory()", e, eos_y, cur_y);
-        return;
-    }
+    {
+        gb_pad pad (m_pad->m_win, m_nstream->m_tbuf);
+        pad.m_display_from_bottom = true;
 
-    if (write) {
+        GB_LOGGER(GB_LOG_TRACE) << "Address: ";
+        pad.refresh();
+
+        // Wait for address input
+        std::string input = pad.get_string();
+
+        // Search for up to two substrings, the first is the address and the second is the
+        // optional data to write to the address separated by a '='
+        size_t pos = input.find_first_of('=', 0);
+        write = (pos != std::string::npos) ? true : false;
+
         try {
-            data = std::stoul(input.substr(pos+1), nullptr, 0);
+            addr = std::stoul(input.substr(0, pos), nullptr, 0);
         } catch (const std::exception& e) {
-            handle_exception("gb_debugger::_debugger_access_memory()", e, eos_y, cur_y);
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_access_memory() -- " << e.what() << std::endl;
+            pad.wait();
             return;
         }
-    }
 
-    // Clear line & restore window
-    clear_line(eos_y);
-    restore_window(cur_y);
+        if (write) {
+            try {
+                data = std::stoul(input.substr(pos+1), nullptr, 0);
+            } catch (const std::exception& e) {
+                GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_access_memory() -- " << e.what() << std::endl;
+                pad.wait();
+                return;
+            }
+        }
+    }
 
     // Read or write data to memory
     if (write) {
@@ -386,19 +396,18 @@ void gb_debugger::_debugger_access_memory() {
     }
 
     GB_LOGGER(GB_LOG_TRACE) << "0x" << std::setfill('0') << std::setw(4) << std::hex << addr << " = " << "0x" << std::setfill('0') << std::setw(2) << std::hex << data << std::endl;
-    update_pos();
+    m_pad->update_scroll();
 }
 
 void gb_debugger::_debugger_breakpoints() {
-    // Get current Y and end-of-screen y
-    int cur_y = getcury(m_nwin);
-    int eos_y = std::max(m_nwin_lines, cur_y);
+    gb_pad pad (m_pad->m_win, m_nstream->m_tbuf);
+    pad.m_display_from_bottom = true;
 
-    // Move to end of screen, clear it and print prompt
-    print_line("Breakpoints: ", eos_y);
+    GB_LOGGER(GB_LOG_TRACE) << "Breakpoints: ";
+    pad.refresh();
 
     // Wait for command input
-    std::string input = get_string(eos_y, getcurx(m_nwin));
+    std::string input = pad.get_string();
 
     // Tokenize input on whitespace
     std::istringstream iss (input);
@@ -407,25 +416,25 @@ void gb_debugger::_debugger_breakpoints() {
     if (tokens.size() >= 1) std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
 
     unsigned int data = 0;
-    auto _try_strtoul = [this, &data, tokens, eos_y, cur_y] () -> bool {
+    auto _try_strtoul = [&pad, &data, tokens] () -> bool {
         if (tokens.size() <= 1) return false;
         try {
             data = static_cast<unsigned int>(std::stoul(tokens[1], nullptr, 0));
         } catch (const std::exception& e) {
-            handle_exception("gb_debugger::_debugger_breakpoints()", e, eos_y, cur_y);
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_breakpoints() -- " << e.what() << std::endl;
+            pad.wait();
             return false;
         }
         return true;
     };
 
-    auto _print_breakpoints = [this, eos_y] () -> void {
-        std::ostringstream sstr;
-        sstr << "Active breakpoints: ";
+    auto _print_breakpoints = [this, &pad] () -> void {
+        GB_LOGGER(GB_LOG_TRACE) << "Active breakpoints: ";
         for (auto bp : m_emulator.m_cpu.m_bp.m_breakpoints) {
-            sstr << "0x" << std::hex << std::setfill('0') << std::setw(4) << bp << ", ";
+            GB_LOGGER(GB_LOG_TRACE) << "0x" << std::hex << std::setfill('0') << std::setw(4) << bp << ", ";
         }
-        print_line(sstr.str(), eos_y);
-        wait_newline(eos_y+1);
+        GB_LOGGER(GB_LOG_TRACE) << std::endl;
+        pad.wait();
     };
 
     if (tokens.size() == 0) {
@@ -441,79 +450,68 @@ void gb_debugger::_debugger_breakpoints() {
     } else if (tokens[0] == "list") {
         _print_breakpoints();
     } else {
-        handle_exception("gb_debugger::_debugger_breakpoints()", std::runtime_error("Unknown command: " + tokens[0]), eos_y, cur_y);
+        GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_breakpoints() -- Unknown command: " << tokens[0] << std::endl;
+        pad.wait();
     }
-
-    // Clear line & restore window
-    clear_line(eos_y);
-    restore_window(cur_y);
-    update_pos();
 }
 
 void gb_debugger::_debugger_save_trace() {
-    // Get current Y and end-of-screen y
-    int cur_y = getcury(m_nwin);
-    int eos_y = std::max(m_nwin_lines, cur_y);
+    gb_pad pad (m_pad->m_win, m_nstream->m_tbuf);
+    pad.m_display_from_bottom = true;
 
-    // Move to end of screen, clear it and print prompt
-    print_line("Save file: ", eos_y);
+    GB_LOGGER(GB_LOG_TRACE) << "Save file: ";
 
     // Wait for command input and attempt to open file
-    std::string input = get_string(eos_y, getcurx(m_nwin));
-
+    std::string input = pad.get_string();
     std::ofstream file (input);
 
     if (!file) {
-        handle_exception("gb_debugger::_debugger_save_trace()", std::runtime_error("Can't open file: " + input), eos_y, cur_y);
-        clear_line(eos_y);
-        restore_window(cur_y);
+        GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_save_trace() -- Can't open file: " << input << std::endl;
+        pad.wait();
         return;
     }
 
     // Go through each line in the window and save it to the file
     char buf[256];
-    for (int i = 0; i < cur_y; i++) {
-        int c_cnt = mvwinnstr(m_nwin, i, 0, buf, 255);
+    for (int i = 0, end = getcury(m_pad->m_win); i < end; i++) {
+        int c_cnt = mvwinnstr(m_pad->m_win, i, 0, buf, 255);
         file << buf << ((buf[c_cnt-1] == '\n' ? "" : "\n"));
     }
 
-    print_line("Saved to file: " + input, eos_y);
-    wait_newline(eos_y+1);
-
-    // Clear line & restore window
-    clear_line(eos_y);
-    restore_window(cur_y);
-    update_pos();
+    GB_LOGGER(GB_LOG_TRACE) << "Saved to file: " << input << std::endl;
+    pad.wait();
 }
 
 void gb_debugger::_debugger_scroll_up_half_pg() {
     // Half page up
-    m_nwin_pos = std::max(0, m_nwin_pos-(m_nwin_lines/2));
+    int max_lines = getmaxy(stdscr);
+    m_pad->m_pos = std::max(0, m_pad->m_pos-(max_lines/2));
 }
 
 void gb_debugger::_debugger_scroll_dn_half_pg() {
     // Half page down
-    m_nwin_pos = std::min(m_nwin_pos+(m_nwin_lines/2), std::max(0, getcury(m_nwin)-m_nwin_lines));
+    int max_lines = getmaxy(stdscr);
+    m_pad->m_pos = std::min(m_pad->m_pos+(max_lines/2), std::max(0, getcury(m_pad->m_win)-max_lines+1));
 }
 
 void gb_debugger::_debugger_scroll_to_start() {
-    // To bottom of buffer
-    m_nwin_pos = std::max(m_nwin_pos, getcury(m_nwin)-m_nwin_lines);
+    // To top of buffer
+    m_pad->m_pos = 0;
 }
 
 void gb_debugger::_debugger_scroll_to_end() {
-    // To top of buffer
-    m_nwin_pos = 0;
+    // To bottom of buffer
+    m_pad->m_pos = std::max(m_pad->m_pos, getcury(m_pad->m_win)-getmaxy(stdscr)+1);
 }
 
 void gb_debugger::_debugger_scroll_up_one_line() {
     // 1 line up
-    m_nwin_pos = std::max(0, m_nwin_pos-1);
+    m_pad->m_pos = std::max(0, m_pad->m_pos-1);
 }
 
 void gb_debugger::_debugger_scroll_dn_one_line() {
     // 1 line down
-    m_nwin_pos = std::min(m_nwin_pos+1, std::max(0, getcury(m_nwin)-m_nwin_lines));
+    m_pad->m_pos = std::min(m_pad->m_pos+1, std::max(0, getcury(m_pad->m_win)-getmaxy(stdscr)+1));
 }
 
 void gb_debugger::_debugger_toggle_continue() {
