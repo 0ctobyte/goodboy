@@ -71,7 +71,13 @@ private:
     bool                       m_interrupt_enable;
     bool                       m_halted;
     bool                       m_bp_enabled;
+    bool                       m_wp_enabled;
     gb_breakpoint              m_bp;
+    gb_watchpoint              m_wp;
+
+    // read and write to memory with watchpoint checking
+    uint8_t _read_byte(uint16_t addr);
+    void _write_byte(uint16_t addr, uint8_t val);
 
     // Op execution routines
     int _op_exec_cb(const instruction_t& instruction);

@@ -22,6 +22,7 @@
     {"r", "Dump all registers and flags"},\
     {"x", "Examine or modify a single 8-bit memory location. Syntax: 0xff80 | 0xff80=0xff"},\
     {"b", "Set, clear, delete or list breakpoints. Sytanx: set 0xff80 | del 0xff80 | clear | list"},\
+    {"w", "Set, clear, delete or list watchpoints. Sytanx: set 0xff80 | del 0xff80 | clear | list"},\
     {"c", "Continue or halt execution of CPU with instruction tracing enabled"},\
     {"C", "Continue or halt execution of CPU with instruction tracing disabled. Halting will re-enable tracing"},\
     {"s", "Save the last " GB_DEBUGGER_NWIN_MAX_LINES_STR " of the debugger trace to a file"},\
@@ -42,6 +43,7 @@
     {'r', std::bind(&gb_debugger::_debugger_dump_registers, this)},\
     {'x', std::bind(&gb_debugger::_debugger_access_memory, this)},\
     {'b', std::bind(&gb_debugger::_debugger_breakpoints, this)},\
+    {'w', std::bind(&gb_debugger::_debugger_watchpoints, this)},\
     {'c', std::bind(&gb_debugger::_debugger_toggle_continue, this)},\
     {'C', std::bind(&gb_debugger::_debugger_toggle_continue_and_tracing, this)},\
     {'s', std::bind(&gb_debugger::_debugger_save_trace, this)},\
@@ -451,6 +453,62 @@ void gb_debugger::_debugger_breakpoints() {
         _print_breakpoints();
     } else {
         GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_breakpoints() -- Unknown command: " << tokens[0] << std::endl;
+        pad.wait();
+    }
+}
+
+void gb_debugger::_debugger_watchpoints() {
+    gb_pad pad (m_pad->m_win, m_nstream->m_tbuf);
+    pad.m_display_from_bottom = true;
+
+    GB_LOGGER(GB_LOG_TRACE) << "Watchpoints: ";
+    pad.refresh();
+
+    // Wait for command input
+    std::string input = pad.get_string();
+
+    // Tokenize input on whitespace
+    std::istringstream iss (input);
+    std::vector<std::string> tokens;
+    std::copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(), std::back_inserter(tokens));
+    if (tokens.size() >= 1) std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
+
+    unsigned int data = 0;
+    auto _try_strtoul = [&pad, &data, tokens] () -> bool {
+        if (tokens.size() <= 1) return false;
+        try {
+            data = static_cast<unsigned int>(std::stoul(tokens[1], nullptr, 0));
+        } catch (const std::exception& e) {
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_watchpoints() -- " << e.what() << std::endl;
+            pad.wait();
+            return false;
+        }
+        return true;
+    };
+
+    auto _print_watchpoints = [this, &pad] () -> void {
+        GB_LOGGER(GB_LOG_TRACE) << "Active watchpoints: ";
+        for (auto wp : m_emulator.m_cpu.m_wp.m_breakpoints) {
+            GB_LOGGER(GB_LOG_TRACE) << "0x" << std::hex << std::setfill('0') << std::setw(4) << wp << ", ";
+        }
+        GB_LOGGER(GB_LOG_TRACE) << std::endl;
+        pad.wait();
+    };
+
+    if (tokens.size() == 0) {
+    } else if (tokens[0] == "set" && _try_strtoul()) {
+        m_emulator.m_cpu.m_wp.add(data);
+        m_emulator.m_cpu.m_wp_enabled = true;
+    } else if (tokens[0] == "del" && _try_strtoul()) {
+        m_emulator.m_cpu.m_wp.remove(data);
+        m_emulator.m_cpu.m_wp_enabled = (m_emulator.m_cpu.m_wp.m_breakpoints.size() != 0);
+    } else if (tokens[0] == "clear") {
+        m_emulator.m_cpu.m_wp.clear();
+        m_emulator.m_cpu.m_wp_enabled = false;
+    } else if (tokens[0] == "list") {
+        _print_watchpoints();
+    } else {
+        GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_watchpoints() -- Unknown command: " << tokens[0] << std::endl;
         pad.wait();
     }
 }

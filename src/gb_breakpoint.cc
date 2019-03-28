@@ -3,17 +3,21 @@
 
 #include "gb_breakpoint.h"
 
-gb_breakpoint_exception::gb_breakpoint_exception(unsigned int bp)
-  : std::exception()
+gb_breakpoint_exception::gb_breakpoint_exception(std::string msg, unsigned int val)
+    : std::exception(), m_val(val), m_last_cycle_count(0)
 {
     std::ostringstream sstr;
-    sstr << "Breakpoint hit: " << "0x" << std::hex << std::setfill('0') << std::setw(4) << bp;
+    sstr << msg << " 0x" << std::hex << std::setfill('0') << std::setw(4) << m_val;
     m_msg = sstr.str();
-    m_last_cycle_count = 0;
 }
 
-gb_breakpoint_exception::gb_breakpoint_exception(unsigned int bp, int cycles)
-    : gb_breakpoint_exception(bp)
+gb_breakpoint_exception::gb_breakpoint_exception(unsigned int val)
+  : gb_breakpoint_exception("Breakpoint hit:", val)
+{
+}
+
+gb_breakpoint_exception::gb_breakpoint_exception(unsigned int val, int cycles)
+    : gb_breakpoint_exception(val)
 {
     m_last_cycle_count = cycles;
 }
@@ -24,6 +28,10 @@ char const * gb_breakpoint_exception::what() const noexcept {
 
 int gb_breakpoint_exception::get_last_cycle_count() const noexcept {
     return m_last_cycle_count;
+}
+
+unsigned int gb_breakpoint_exception::get_val() const noexcept {
+    return m_val;
 }
 
 gb_breakpoint::gb_breakpoint()

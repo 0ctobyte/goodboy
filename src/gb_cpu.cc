@@ -22,7 +22,7 @@
 
 gb_cpu::gb_cpu(gb_memory_map& memory_map)
     : m_instructions(INSTRUCTIONS_INIT), m_cb_instructions(CB_INSTRUCTIONS_INIT), m_memory_map(memory_map), m_eidi_flag(EIDI_NONE), m_interrupt_enable(true), m_halted(false),
-      m_bp_enabled(false), m_bp()
+      m_bp_enabled(false), m_wp_enabled(false), m_bp(), m_wp()
 {
     m_registers.af = 0x01b0;
     m_registers.bc = 0x0013;
@@ -91,8 +91,17 @@ int gb_cpu::step() {
     if (m_eidi_flag == EIDI_IDISABLE) m_interrupt_enable = false;
     m_eidi_flag = EIDI_NONE;
 
-    // Execute instruction
-    int cycles = instruction.op_exec(instruction);
+    // Execute instruction and catch any watchpoint exceptions
+    int cycles = 0;
+    gb_cpu::registers_t saved_registers = m_registers;
+    try {
+        cycles = instruction.op_exec(instruction);
+    } catch (const gb_watchpoint_exception& wp) {
+        // Rollback register state
+        m_registers = saved_registers;
+        // Throw watchpoint exception with custom message
+        throw gb_watchpoint_exception("Watchpoing hit:", wp.get_val());
+    }
 
     // Check for breakpoints
     if (m_bp_enabled) m_bp.match(m_registers.pc, cycles);
@@ -746,6 +755,20 @@ int gb_cpu::_op_exec_ei(const instruction_t& instruction) {
     return instruction.cycles_hi;
 }
 
+uint8_t gb_cpu::_read_byte(uint16_t addr) {
+    // Check for watchpoints
+    if (m_wp_enabled) m_wp.match(addr);
+
+    return m_memory_map.read_byte(addr);
+}
+
+void gb_cpu::_write_byte(uint16_t addr, uint8_t val) {
+    // Check for watchpoints
+    if (m_wp_enabled) m_wp.match(addr);
+
+    m_memory_map.write_byte(addr, val);
+}
+
 uint16_t gb_cpu::_operand_get_register_a() {
     return m_registers.a;
 }
@@ -818,6 +841,12 @@ uint16_t gb_cpu::_operand_get_mem_8() {
     return m_memory_map.read_byte(m_registers.pc++);
 }
 
+uint16_t gb_cpu::_operand_get_mem_16() {
+    uint16_t byte_lo = m_memory_map.read_byte(m_registers.pc++);
+    uint16_t byte_hi = m_memory_map.read_byte(m_registers.pc++);
+    return static_cast<uint16_t>((byte_hi << 8) | byte_lo);
+}
+
 uint16_t gb_cpu::_operand_get_mem_8_plus_io_base() {
     uint16_t offset = _operand_get_mem_8();
     return (offset + GB_MEMORY_MAP_IO_BASE);
@@ -830,39 +859,33 @@ uint16_t gb_cpu::_operand_get_register_c_plus_io_base() {
 
 uint16_t gb_cpu::_operand_get_register_c_plus_io_base_mem() {
     uint16_t addr = _operand_get_register_c_plus_io_base();
-    return m_memory_map.read_byte(addr);
-}
-
-uint16_t gb_cpu::_operand_get_mem_16() {
-    uint16_t byte_lo = m_memory_map.read_byte(m_registers.pc++);
-    uint16_t byte_hi = m_memory_map.read_byte(m_registers.pc++);
-    return static_cast<uint16_t>((byte_hi << 8) | byte_lo);
+    return _read_byte(addr);
 }
 
 uint16_t gb_cpu::_operand_get_mem_16_mem() {
     uint16_t addr = _operand_get_mem_16();
-    return m_memory_map.read_byte(addr);
+    return _read_byte(addr);
 }
 
 uint16_t gb_cpu::_operand_get_mem_bc() {
-    return m_memory_map.read_byte(m_registers.bc);
+    return _read_byte(m_registers.bc);
 }
 
 uint16_t gb_cpu::_operand_get_mem_de() {
-    return m_memory_map.read_byte(m_registers.de);
+    return _read_byte(m_registers.de);
 }
 
 uint16_t gb_cpu::_operand_get_mem_hl() {
-    return m_memory_map.read_byte(m_registers.hl);
+    return _read_byte(m_registers.hl);
 }
 
 uint16_t gb_cpu::_operand_get_mem_sp_8() {
-    return m_memory_map.read_byte(m_registers.sp++);
+    return _read_byte(m_registers.sp++);
 }
 
 uint16_t gb_cpu::_operand_get_mem_sp_16() {
-    uint16_t byte_lo = m_memory_map.read_byte(m_registers.sp++);
-    uint16_t byte_hi = m_memory_map.read_byte(m_registers.sp++);
+    uint16_t byte_lo = _read_byte(m_registers.sp++);
+    uint16_t byte_hi = _read_byte(m_registers.sp++);
     return static_cast<uint16_t>((byte_hi << 8) | byte_lo);
 }
 
@@ -1003,11 +1026,11 @@ void gb_cpu::_operand_set_register_pc(uint16_t addr, uint16_t val) {
 }
 
 void gb_cpu::_operand_set_register_a_mem(uint16_t addr, uint16_t val) {
-    m_registers.a = static_cast<uint8_t>(m_memory_map.read_byte(val));
+    m_registers.a = static_cast<uint8_t>(_read_byte(val));
 }
 
 void gb_cpu::_operand_set_mem_8(uint16_t addr, uint16_t val) {
-    m_memory_map.write_byte(addr, static_cast<uint8_t>(val));
+    _write_byte(addr, static_cast<uint8_t>(val));
 }
 
 void gb_cpu::_operand_set_mem_16(uint16_t addr, uint16_t val) {
@@ -1020,8 +1043,8 @@ void gb_cpu::_operand_set_mem_hl_8(uint16_t addr, uint16_t val) {
 }
 
 void gb_cpu::_operand_set_mem_sp_16(uint16_t addr, uint16_t val) {
-    m_memory_map.write_byte(--m_registers.sp, static_cast<uint8_t>(val >> 8));
-    m_memory_map.write_byte(--m_registers.sp, static_cast<uint8_t>(val));
+    _write_byte(--m_registers.sp, static_cast<uint8_t>(val >> 8));
+    _write_byte(--m_registers.sp, static_cast<uint8_t>(val));
 }
 
 void gb_cpu::_op_print_type0(const std::string& disassembly, uint16_t pc, uint16_t operand1, uint16_t operand2) const {

@@ -8,16 +8,21 @@
 
 class gb_breakpoint_exception : public std::exception {
 public:
-    gb_breakpoint_exception(unsigned int bp);
-    gb_breakpoint_exception(unsigned int bp, int cycles);
+    gb_breakpoint_exception(std::string msg, unsigned int val);
+    gb_breakpoint_exception(unsigned int val);
+    gb_breakpoint_exception(unsigned int val, int cycles);
 
     virtual char const * what() const noexcept;
     int get_last_cycle_count() const noexcept;
+    unsigned int get_val() const noexcept;
 
 private:
-    std::string m_msg;
-    int         m_last_cycle_count;
+    std::string  m_msg;
+    unsigned int m_val;
+    int          m_last_cycle_count;
 };
+
+using gb_watchpoint_exception = gb_breakpoint_exception;
 
 // This class provides routines to add/remove and check if a breakpoint was hit
 class gb_breakpoint {
@@ -49,5 +54,7 @@ private:
 
     gb_breakpoint_set_t m_breakpoints;
 };
+
+using gb_watchpoint = gb_breakpoint;
 
 #endif // GB_BREAKPOINT_H_
