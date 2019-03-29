@@ -8,6 +8,7 @@
 #include "gb_framebuffer.h"
 
 class gb_ppu : public gb_memory_mapped_device, public gb_interrupt_source {
+friend class gb_debugger;
 public:
     gb_ppu(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_framebuffer& framebuffer);
     virtual ~gb_ppu() override;

@@ -5,6 +5,7 @@
 #include <functional>
 
 #include "gb_emulator.h"
+#include "gb_ppu.h"
 
 class ncurses_stream;
 class gb_pad;
@@ -31,6 +32,7 @@ private:
     gb_pad_ptr          m_pad;
     int                 m_frame_cycles;
     bool                m_continue;
+    gb_ppu_ptr          m_ppu;
 
     void _debugger_help();
     void _debugger_step_once();
@@ -40,6 +42,7 @@ private:
     void _debugger_breakpoints();
     void _debugger_watchpoints();
     void _debugger_save_trace();
+    void _debugger_sprite_viewer();
     void _debugger_scroll_up_half_pg();
     void _debugger_scroll_dn_half_pg();
     void _debugger_scroll_to_start();

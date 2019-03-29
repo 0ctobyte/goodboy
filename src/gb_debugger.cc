@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <thread>
 #include <chrono>
+#include <bitset>
 
 #include <ncurses.h>
 
@@ -26,6 +27,7 @@
     {"c", "Continue or halt execution of CPU with instruction tracing enabled"},\
     {"C", "Continue or halt execution of CPU with instruction tracing disabled. Halting will re-enable tracing"},\
     {"s", "Save the last " GB_DEBUGGER_NWIN_MAX_LINES_STR " of the debugger trace to a file"},\
+    {"o", "Sprite viewer; examine the OAM and individual sprite tiles. Syntax: dump | see <0-39>"},\
     {"u", "Scroll up half a page"},\
     {"d", "Scroll down half a page"},\
     {"G", "Scroll to beginning"},\
@@ -47,6 +49,7 @@
     {'c', std::bind(&gb_debugger::_debugger_toggle_continue, this)},\
     {'C', std::bind(&gb_debugger::_debugger_toggle_continue_and_tracing, this)},\
     {'s', std::bind(&gb_debugger::_debugger_save_trace, this)},\
+    {'o', std::bind(&gb_debugger::_debugger_sprite_viewer, this)},\
     {'u', std::bind(&gb_debugger::_debugger_scroll_up_half_pg, this)},\
     {'d', std::bind(&gb_debugger::_debugger_scroll_dn_half_pg, this)},\
     {'g', std::bind(&gb_debugger::_debugger_scroll_to_start, this)},\
@@ -145,7 +148,7 @@ void gb_pad::refresh() {
 }
 
 void gb_pad::wait() {
-    GB_LOGGER(GB_LOG_FATAL) << "Press ENTER to continue...";
+    GB_LOGGER(GB_LOG_TRACE) << "Press ENTER to continue...";
     refresh();
     for (int c = wgetch(m_win); c != '\n' && c != '\r'; c = wgetch(m_win)) std::this_thread::sleep_for(std::chrono::milliseconds(GB_DEBUGGER_WAIT_MS));
     wmove(m_win, getcury(m_win), 0);
@@ -176,7 +179,7 @@ std::string gb_pad::get_string() {
 }
 
 gb_debugger::gb_debugger(gb_emulator& emulator)
-    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_command_doc(COMMAND_DOC_LIST), m_frame_cycles(0), m_continue(false)
+    : m_emulator(emulator), m_key_map(KEY_MAP_INIT), m_command_doc(COMMAND_DOC_LIST), m_frame_cycles(0), m_continue(false), m_ppu()
 {
     // Initialize the ncurses library, disable line-buffering and disable character echoing
     // Enable blocking on getch()
@@ -191,6 +194,9 @@ gb_debugger::gb_debugger(gb_emulator& emulator)
 
     m_pad = std::make_unique<gb_pad>(scr, m_nstream->m_tbuf);
     m_pad->refresh();
+
+    // Get a pointer to the ppu
+    m_ppu = std::dynamic_pointer_cast<gb_ppu>(m_emulator.m_memory_map.get_readable_device(GB_VIDEO_RAM_ADDR));
 }
 
 gb_debugger::~gb_debugger() {
@@ -284,7 +290,7 @@ void gb_debugger::_debugger_modify_register() {
             reg.erase(std::remove_if(reg.begin(), reg.end(), [] (char c) { return std::isspace(c); }), reg.end());
             std::transform(reg.begin(), reg.end(), reg.begin(), ::tolower);
         } catch (const std::exception& e) {
-            GB_LOGGER(GB_LOG_FATAL) << "gb_debugger::_debugger_modify_register() -- " << e.what() << std::endl;
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_modify_register() -- " << e.what() << std::endl;
             pad.wait();
             return;
         }
@@ -293,7 +299,7 @@ void gb_debugger::_debugger_modify_register() {
             try {
                 data = static_cast<uint16_t>(std::stoul(input.substr(pos+1), nullptr, 0));
             } catch (const std::exception& e) {
-                GB_LOGGER(GB_LOG_FATAL) << "gb_debugger::_debugger_modify_register() -- " << e.what() << std::endl;
+                GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_modify_register() -- " << e.what() << std::endl;
                 pad.wait();
                 return;
             }
@@ -335,7 +341,7 @@ void gb_debugger::_debugger_modify_register() {
         } else if (reg == "hl") {
             data = do_reg(std::bind(&gb_cpu::_operand_get_register_hl, &m_emulator.m_cpu), std::bind(&gb_cpu::_operand_set_register_hl, &m_emulator.m_cpu, 0, data));
         } else {
-            GB_LOGGER(GB_LOG_FATAL) << "gb_debugger::_debugger_modify_register() -- Unknown register: " << reg << std::endl;
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_modify_register() -- Unknown register: " << reg << std::endl;
             pad.wait();
             return;
         }
@@ -440,10 +446,12 @@ void gb_debugger::_debugger_breakpoints() {
     };
 
     if (tokens.size() == 0) {
-    } else if (tokens[0] == "set" && _try_strtoul()) {
+    } else if (tokens[0] == "set") {
+        if (!_try_strtoul()) return;
         m_emulator.m_cpu.m_bp.add(data);
         m_emulator.m_cpu.m_bp_enabled = true;
-    } else if (tokens[0] == "del" && _try_strtoul()) {
+    } else if (tokens[0] == "del") {
+        if (!_try_strtoul()) return;
         m_emulator.m_cpu.m_bp.remove(data);
         m_emulator.m_cpu.m_bp_enabled = (m_emulator.m_cpu.m_bp.m_breakpoints.size() != 0);
     } else if (tokens[0] == "clear") {
@@ -496,10 +504,13 @@ void gb_debugger::_debugger_watchpoints() {
     };
 
     if (tokens.size() == 0) {
-    } else if (tokens[0] == "set" && _try_strtoul()) {
+    } else if (tokens[0] == "set") {
+        if (!_try_strtoul()) return;
         m_emulator.m_cpu.m_wp.add(data);
         m_emulator.m_cpu.m_wp_enabled = true;
-    } else if (tokens[0] == "del" && _try_strtoul()) {
+    } else if (tokens[0] == "del") {
+        if (!_try_strtoul()) return;
+        m_emulator.m_cpu.m_wp.add(data);
         m_emulator.m_cpu.m_wp.remove(data);
         m_emulator.m_cpu.m_wp_enabled = (m_emulator.m_cpu.m_wp.m_breakpoints.size() != 0);
     } else if (tokens[0] == "clear") {
@@ -518,6 +529,7 @@ void gb_debugger::_debugger_save_trace() {
     pad.m_display_from_bottom = true;
 
     GB_LOGGER(GB_LOG_TRACE) << "Save file: ";
+    pad.refresh();
 
     // Wait for command input and attempt to open file
     std::string input = pad.get_string();
@@ -538,6 +550,149 @@ void gb_debugger::_debugger_save_trace() {
 
     GB_LOGGER(GB_LOG_TRACE) << "Saved to file: " << input << std::endl;
     pad.wait();
+}
+
+void gb_debugger::_debugger_sprite_viewer() {
+    gb_pad pad (m_pad->m_win, m_nstream->m_tbuf);
+    pad.m_display_from_bottom = true;
+
+    GB_LOGGER(GB_LOG_TRACE) << "Sprite viewer: ";
+    pad.refresh();
+
+    // Wait for command input
+    std::string input = pad.get_string();
+
+    // Tokenize input on whitespace
+    std::istringstream iss (input);
+    std::vector<std::string> tokens;
+    std::copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(), std::back_inserter(tokens));
+    if (tokens.size() >= 1) std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
+
+    unsigned int data = 0;
+    auto _try_strtoul = [&pad, &data, tokens] () -> bool {
+        if (tokens.size() <= 1) return false;
+        try {
+            data = static_cast<unsigned int>(std::stoul(tokens[1], nullptr, 0));
+        } catch (const std::exception& e) {
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_breakpoints() -- " << e.what() << std::endl;
+            pad.wait();
+            return false;
+        }
+        return true;
+    };
+
+    auto _flag_str = [] (uint16_t flags, uint8_t mask, std::string t) -> std::string {
+        return (flags & mask) ? t : std::string("-");
+    };
+
+    auto _sprite_hdr = [] () -> void {
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) <<  std::setfill(' ') << "sprite";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << "OAM";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << "(x,y)";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << "(x',y')";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << "tile#";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << "flags" << std::endl;
+    };
+
+    auto _sprite= [&_flag_str] (unsigned int i, uint16_t oam_entry_addr, uint16_t x, uint16_t y, uint16_t tile_num, uint16_t flags) -> void {
+        std::ostringstream oam_addr;
+        oam_addr << "0x" << std::setw(4) << std::setfill('0') << std::hex << oam_entry_addr;
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << std::dec << i;
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << oam_addr.str();
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << "(" + std::to_string(x) + "," + std::to_string(y) + ")";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << "(" + std::to_string(x-8) + "," + std::to_string(y-16) + ")";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << tile_num;
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(10) << _flag_str(flags, 0x80, "B") + _flag_str(flags, 0x40, "Y") + _flag_str(flags, 0x20, "X") + _flag_str(flags, 0x10, "P");
+        GB_LOGGER(GB_LOG_TRACE) << std::endl;
+    };
+
+    auto _dump_oam = [this, &pad, _sprite_hdr, _sprite] () -> void {
+        _sprite_hdr();
+        for (unsigned int i = 0 ; i < 40; i++ ) {
+            uint16_t oam_entry_addr = static_cast<uint16_t>(GB_PPU_OAM_ADDR + (i * 4));
+            uint16_t y = m_ppu->m_ppu_oam->read_byte(oam_entry_addr);
+            uint16_t x = m_ppu->m_ppu_oam->read_byte(oam_entry_addr + 1);
+            uint16_t tile_num = m_ppu->m_ppu_oam->read_byte(oam_entry_addr + 2);
+            uint16_t flags = m_ppu->m_ppu_oam->read_byte(oam_entry_addr + 3);
+            _sprite(i, oam_entry_addr, x, y, tile_num, flags);
+        }
+
+        pad.wait();
+    };
+
+    auto _see_sprite = [this, &pad, _sprite_hdr, _sprite] (unsigned int i) -> void {
+        uint16_t oam_entry_addr = static_cast<uint16_t>(GB_PPU_OAM_ADDR + (i * 4));
+        uint16_t y = m_ppu->m_ppu_oam->read_byte(oam_entry_addr);
+        uint16_t x = m_ppu->m_ppu_oam->read_byte(oam_entry_addr + 1);
+        uint16_t tile_num = m_ppu->m_ppu_oam->read_byte(oam_entry_addr + 2);
+        uint16_t flags = m_ppu->m_ppu_oam->read_byte(oam_entry_addr + 3);
+
+        _sprite_hdr();
+        _sprite(i, oam_entry_addr, x, y, tile_num, flags);
+        GB_LOGGER(GB_LOG_TRACE) << std::endl;
+
+        uint16_t sprite_addr = GB_VIDEO_RAM_ADDR + (tile_num * 16);
+        // Read the pixel data for the line
+        uint8_t sprite_size = (m_emulator.m_memory_map.read_byte(GB_LCDC_ADDR) & 0x4) ? 16 : 8;
+        uint8_t obj_palette = (flags & 0x10) ? m_ppu->m_ppu_palette->read_byte(GB_PPU_OBP1_ADDR) : m_ppu->m_ppu_palette->read_byte(GB_PPU_OBP0_ADDR);
+
+        GB_LOGGER(GB_LOG_TRACE) << "tile address: 0x" << std::hex << std::setw(4) << std::setfill('0') << sprite_addr << std::endl << std::endl;
+
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << std::setfill(' ') << "raw";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << "index";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << "colour" << std::endl;
+        for (uint8_t sy = 0 ; sy < sprite_size; sy++) {
+            uint8_t line_offset = ((flags & 0x40) ? (sprite_size - 1) - sy : sy) * 2;
+            uint8_t sprite_line_lo = m_ppu->read_byte(sprite_addr + line_offset);
+            uint8_t sprite_line_hi = m_ppu->read_byte(sprite_addr + (line_offset + 1));
+
+            std::ostringstream bits;
+            bits << std::bitset<8>(sprite_line_hi) << " " << std::bitset<8>(sprite_line_lo);
+            GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << bits.str();
+
+            std::ostringstream indices;
+            for (uint8_t sx = 0; sx < 8; sx++) {
+                uint8_t col_offset = (flags & 0x20) ? (sx & 0x7) : 7 - (sx & 0x7);
+                uint8_t colour_idx = static_cast<uint8_t>(((sprite_line_lo >> col_offset) & 0x1) | (((sprite_line_hi >> col_offset) & 0x1) << 1));
+
+                indices << std::bitset<2>(colour_idx) << " ";
+            }
+            GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << indices.str();
+
+            std::ostringstream o_colours;
+            for (uint8_t sx = 0; sx < 8; sx++) {
+                uint8_t col_offset = (flags & 0x20) ? (sx & 0x7) : 7 - (sx & 0x7);
+                uint8_t colour_idx = static_cast<uint8_t>(((sprite_line_lo >> col_offset) & 0x1) | (((sprite_line_hi >> col_offset) & 0x1) << 1));
+                uint8_t colour = (obj_palette >> (colour_idx * 2)) & 0x3;
+
+                uint8_t colour_indicator;
+                switch (colour) {
+                    case 0: colour_indicator = 'W'; break;
+                    case 1: colour_indicator = 'L'; break;
+                    case 2: colour_indicator = 'D'; break;
+                    case 3: colour_indicator = 'B'; break;
+                    default: colour_indicator = ' '; break;
+                }
+                colour_indicator = colour_idx == 0 ? ' ' : colour_indicator;
+
+                o_colours << colour_indicator << " ";
+            }
+            GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << o_colours.str() << std::endl;
+        }
+
+        pad.wait();
+    };
+
+    if (tokens.size() == 0) {
+    } else if (tokens[0] == "see") {
+        if (!_try_strtoul()) return;
+        _see_sprite(data);
+    } else if (tokens[0] == "dump") {
+        _dump_oam();
+    } else {
+        GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_breakpoints() -- Unknown command: " << tokens[0] << std::endl;
+        pad.wait();
+    }
 }
 
 void gb_debugger::_debugger_scroll_up_half_pg() {
