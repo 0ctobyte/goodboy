@@ -224,7 +224,8 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
             if (lx < 0 || lx >= 160) continue;
 
             // Get colour index from the tile line; works the same way as the background tile data
-            uint8_t x = sprite.flip_x ? (lx & 0x7) : 7 - (lx & 0x7);
+            uint8_t x = static_cast<uint8_t>(lx - sx);
+            x = sprite.flip_x ? x : 7 - x;
             uint8_t colour_idx = static_cast<uint8_t>(((sprite_line_lo >> x) & 0x1) | (((sprite_line_hi >> x) & 0x1) << 1));
 
             // For sprites, a colour index of 0 in the tile data means transparent. Don't even draw it.

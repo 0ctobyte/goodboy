@@ -226,7 +226,7 @@ void gb_debugger::go() {
 
         m_pad->refresh();
 
-        if (m_frame_cycles >= 70224) {
+        if (m_frame_cycles >= 70224 || !m_continue) {
             m_frame_cycles = 0;
             m_emulator.m_renderer.update(((m_emulator.m_memory_map.read_byte(GB_LCDC_ADDR) & 0x80) != 0));
         }
@@ -574,7 +574,7 @@ void gb_debugger::_debugger_sprite_viewer() {
         try {
             data = static_cast<unsigned int>(std::stoul(tokens[1], nullptr, 0));
         } catch (const std::exception& e) {
-            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_breakpoints() -- " << e.what() << std::endl;
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_sprite_viewer() -- " << e.what() << std::endl;
             pad.wait();
             return false;
         }
@@ -686,11 +686,16 @@ void gb_debugger::_debugger_sprite_viewer() {
     if (tokens.size() == 0) {
     } else if (tokens[0] == "see") {
         if (!_try_strtoul()) return;
+        if (data > 39) {
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_sprite_viewer() -- Invalid sprite #: " << data << std::endl;
+            pad.wait();
+            return;
+        }
         _see_sprite(data);
     } else if (tokens[0] == "dump") {
         _dump_oam();
     } else {
-        GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_breakpoints() -- Unknown command: " << tokens[0] << std::endl;
+        GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_sprite_viewer() -- Unknown command: " << tokens[0] << std::endl;
         pad.wait();
     }
 }
