@@ -216,13 +216,6 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
         uint8_t sprite_line_lo = this->read_byte(sprite_addr + line_offset);
         uint8_t sprite_line_hi = this->read_byte(sprite_addr + (line_offset + 1));
 
-        //std::vector<uint8_t> tile_list ({0, 1, 2, 3, 4, 5, 6, 7, 8, 32, 33, 34, 35, 36, 37, 52, 53, 64, 65, 66, 67, 48, 49, 80, 81, 82, 83, 96, 97, 112, 113, 128, 130, 144, 145, 146, 178, 255});
-        //if (std::any_of(tile_list.begin(), tile_list.end(), [sprite](uint8_t i) -> bool { return i == sprite.tile_num; })) {
-        //if (sprite.use_obp1) {
-        //    sprite_line_lo = static_cast<uint8_t>(((sprite_line_lo & 0xf) << 4) | ((sprite_line_lo & 0xf0) >> 4));
-        //    sprite_line_hi = static_cast<uint8_t>(((sprite_line_hi & 0xf) << 4) | ((sprite_line_hi & 0xf0) >> 4));
-        //}
-
         // Which palette is this sprite using?
         uint8_t obj_palette = sprite.use_obp1 ? obp1 : obp0;
 
