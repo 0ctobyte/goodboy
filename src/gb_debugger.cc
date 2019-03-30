@@ -862,11 +862,11 @@ void gb_debugger::_debugger_tile_map_viewer() {
         bool map_visible = (lcdc & 0x1);
         _dump_map(map_addr, tile_data_addr, scx, scy, map_visible, true);
     } else if (tokens[0] == "dump" && tokens.size() > 1 && tokens[1] == "win") {
-        uint8_t scx = m_ppu->m_ppu_win_scroll->read_byte(GB_PPU_WIN_SCROLL_X_ADDR);
-        uint8_t scy = m_ppu->m_ppu_win_scroll->read_byte(GB_PPU_WIN_SCROLL_Y_ADDR);
+        int16_t scx = static_cast<int8_t>(m_ppu->m_ppu_win_scroll->read_byte(GB_PPU_WIN_SCROLL_X_ADDR));
+        int16_t scy = static_cast<int8_t>(m_ppu->m_ppu_win_scroll->read_byte(GB_PPU_WIN_SCROLL_Y_ADDR));
         uint16_t map_addr = (lcdc & 0x40) ? 0x9c00 : 0x9800;
         bool map_visible = (lcdc & 0x20) && (scx >=0 && scx < 167) && (scy >=0 && scy < 144);
-        _dump_map(map_addr, tile_data_addr, static_cast<int8_t>(scx-7), static_cast<int8_t>(scy), map_visible, false);
+        _dump_map(map_addr, tile_data_addr, scx-7, scy, map_visible, false);
     } else {
         GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_tile_map_viewer() -- Unknown command: " << tokens[0] << std::endl;
         pad.wait();
