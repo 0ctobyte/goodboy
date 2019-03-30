@@ -13,6 +13,8 @@ public:
 
     virtual unsigned long translate(uint16_t addr) const override;
     virtual void write_byte(uint16_t addr, uint8_t val) override;
+    unsigned long get_current_bank() const;
+    void set_current_bank(unsigned long bank);
 
 private:
     unsigned long m_num_banks;

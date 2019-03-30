@@ -12,6 +12,8 @@ public:
     virtual ~gb_ram() override;
 
     virtual unsigned long translate(uint16_t addr) const override;
+    unsigned long get_current_bank() const;
+    void set_current_bank(unsigned long bank);
 
 private:
     unsigned long m_ram_size;

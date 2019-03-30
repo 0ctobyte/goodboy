@@ -31,3 +31,11 @@ unsigned long gb_ram::translate(uint16_t addr) const {
 
     return (offset + m_mm_start_addr);
 }
+
+unsigned long gb_ram::get_current_bank() const {
+    return m_cur_bank;
+}
+
+void gb_ram::set_current_bank(unsigned long bank) {
+    m_cur_bank = bank;
+}

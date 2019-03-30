@@ -3,8 +3,12 @@
 
 #define CLOCK_SPEED              (4194304)
 
-#define GB_RAM_BANK_SIZE         (0x2000)
+#define GB_ROM_ADDR              (0x0000)
+#define GB_ROM_BANKN_ADDR        (0x4000)
 #define GB_ROM_BANK_SIZE         (0x4000)
+
+#define GB_RAM_ADDR              (0xA000)
+#define GB_RAM_BANK_SIZE         (0x2000)
 
 #define GB_VIDEO_RAM_ADDR        (0x8000)
 #define GB_VIDEO_RAM_SIZE        (0x2000)

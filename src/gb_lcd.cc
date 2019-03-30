@@ -32,6 +32,10 @@ gb_lcd::gb_lcd(gb_memory_manager& memory_manager, gb_memory_map& memory_map)
     gb_address_range_t addr_range = m_lcd_ly->get_address_range();
     m_memory_map.add_readable_device(m_lcd_ly, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(m_lcd_ly, std::get<0>(addr_range), std::get<1>(addr_range));
+
+    // Initialize the LCDC register. The LCD should be turned on [7], BG/WIN tile data select = 0x8000 [4]
+    // and the backgroud and window display should be turned on [0]
+    gb_memory_mapped_device::write_byte(GB_LCDC_ADDR, 0x91);
 }
 
 gb_lcd::~gb_lcd() {

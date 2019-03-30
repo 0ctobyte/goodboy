@@ -30,3 +30,11 @@ unsigned long gb_rom::translate(uint16_t addr) const {
 void gb_rom::write_byte(uint16_t addr, uint8_t val) {
     GB_LOGGER(GB_LOG_WARN) << "gb_rom::write_byte - Attempting to write to read-only memory: " << std::hex << addr << " : " << std::hex << static_cast<uint16_t>(val) << std::endl;
 }
+
+unsigned long gb_rom::get_current_bank() const {
+    return m_cur_bank;
+}
+
+void gb_rom::set_current_bank(unsigned long bank) {
+    m_cur_bank = bank;
+}
