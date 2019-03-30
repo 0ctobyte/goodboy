@@ -28,6 +28,7 @@
     {"C", "Continue or halt execution of CPU with instruction tracing disabled. Halting will re-enable tracing"},\
     {"s", "Save the last " GB_DEBUGGER_NWIN_MAX_LINES_STR " of the debugger trace to a file"},\
     {"o", "Sprite viewer; examine the OAM and individual sprite tiles. Syntax: dump | see <0-39>"},\
+    {"t", "Tile map viewer; examine the background and window maps and individual tiles. Syntax: dump bg | dump win | see <tile_num>"},\
     {"u", "Scroll up half a page"},\
     {"d", "Scroll down half a page"},\
     {"G", "Scroll to beginning"},\
@@ -50,6 +51,7 @@
     {'C', std::bind(&gb_debugger::_debugger_toggle_continue_and_tracing, this)},\
     {'s', std::bind(&gb_debugger::_debugger_save_trace, this)},\
     {'o', std::bind(&gb_debugger::_debugger_sprite_viewer, this)},\
+    {'t', std::bind(&gb_debugger::_debugger_tile_map_viewer, this)},\
     {'u', std::bind(&gb_debugger::_debugger_scroll_up_half_pg, this)},\
     {'d', std::bind(&gb_debugger::_debugger_scroll_dn_half_pg, this)},\
     {'g', std::bind(&gb_debugger::_debugger_scroll_to_start, this)},\
@@ -645,14 +647,29 @@ void gb_debugger::_debugger_sprite_viewer() {
             uint8_t line_offset = ((flags & 0x40) ? (sprite_size - 1) - sy : sy) * 2;
             uint8_t sprite_line_lo = m_ppu->read_byte(sprite_addr + line_offset);
             uint8_t sprite_line_hi = m_ppu->read_byte(sprite_addr + (line_offset + 1));
+            bool flip_x = ((flags & 0x20) != 0);
+
+            int splo = sprite_line_lo;
+            int sphi = sprite_line_hi;
+            if (flip_x) {
+                splo = (splo & 0xf0) >> 4 | (splo & 0x0f) << 4;
+                splo = (splo & 0xcc) >> 2 | (splo & 0x33) << 2;
+                splo = (splo & 0xaa) >> 1 | (splo & 0x55) << 1;
+                sphi = (sphi & 0xf0) >> 4 | (sphi & 0x0f) << 4;
+                sphi = (sphi & 0xcc) >> 2 | (sphi & 0x33) << 2;
+                sphi = (sphi & 0xaa) >> 1 | (sphi & 0x55) << 1;
+            }
+
+            std::bitset<8> sprite_line_lo_bits (static_cast<unsigned int>(splo));
+            std::bitset<8> sprite_line_hi_bits (static_cast<unsigned int>(sphi));
 
             std::ostringstream bits;
-            bits << std::bitset<8>(sprite_line_hi) << " " << std::bitset<8>(sprite_line_lo);
+            bits << sprite_line_hi_bits << " " << sprite_line_lo_bits;
             GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << bits.str();
 
             std::ostringstream indices;
             for (uint8_t sx = 0; sx < 8; sx++) {
-                uint8_t col_offset = (flags & 0x20) ? (sx & 0x7) : 7 - (sx & 0x7);
+                uint8_t col_offset = flip_x ? sx : 7 - sx;
                 uint8_t colour_idx = static_cast<uint8_t>(((sprite_line_lo >> col_offset) & 0x1) | (((sprite_line_hi >> col_offset) & 0x1) << 1));
 
                 indices << std::bitset<2>(colour_idx) << " ";
@@ -661,7 +678,7 @@ void gb_debugger::_debugger_sprite_viewer() {
 
             std::ostringstream o_colours;
             for (uint8_t sx = 0; sx < 8; sx++) {
-                uint8_t col_offset = (flags & 0x20) ? (sx & 0x7) : 7 - (sx & 0x7);
+                uint8_t col_offset = flip_x ? sx : 7 - sx;
                 uint8_t colour_idx = static_cast<uint8_t>(((sprite_line_lo >> col_offset) & 0x1) | (((sprite_line_hi >> col_offset) & 0x1) << 1));
                 uint8_t colour = (obj_palette >> (colour_idx * 2)) & 0x3;
 
@@ -700,6 +717,161 @@ void gb_debugger::_debugger_sprite_viewer() {
     }
 }
 
+void gb_debugger::_debugger_tile_map_viewer() {
+    gb_pad pad (m_pad->m_win, m_nstream->m_tbuf);
+    pad.m_display_from_bottom = true;
+
+    GB_LOGGER(GB_LOG_TRACE) << "Tile map viewer: ";
+    pad.refresh();
+
+    // Wait for command input
+    std::string input = pad.get_string();
+
+    // Tokenize input on whitespace
+    std::istringstream iss (input);
+    std::vector<std::string> tokens;
+    std::copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(), std::back_inserter(tokens));
+    if (tokens.size() >= 1) std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
+
+    int data = 0;
+    auto _try_strtoul = [&pad, &data, tokens] () -> bool {
+        if (tokens.size() <= 1) return false;
+        try {
+            data = static_cast<int>(std::stoul(tokens[1], nullptr, 0));
+        } catch (const std::exception& e) {
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_tile_map_viewer() -- " << e.what() << std::endl;
+            pad.wait();
+            return false;
+        }
+        return true;
+    };
+
+    auto _see_tile = [this, &pad] (uint16_t tile_data_addr, int tile_num) -> void {
+        bool unsigned_offset = (tile_data_addr == 0x8000);
+        uint8_t palette = m_ppu->m_ppu_palette->read_byte(GB_PPU_BGP_ADDR);
+        uint16_t tile_addr = static_cast<uint16_t>(tile_data_addr + ((unsigned_offset ? static_cast<uint8_t>(tile_num) : static_cast<int8_t>(tile_num)) * 16));
+
+        GB_LOGGER(GB_LOG_TRACE) << "tile address: 0x" << std::hex << std::setw(4) << std::setfill('0') << tile_addr << std::endl << std::endl;
+
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << std::setfill(' ') << "raw";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << "index";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << "colour" << std::endl;
+        for (uint8_t sy = 0 ; sy < 8; sy++) {
+            uint8_t line_offset = sy * 2;
+            uint8_t line_lo = m_ppu->read_byte(tile_addr + line_offset);
+            uint8_t line_hi = m_ppu->read_byte(tile_addr + (line_offset + 1));
+
+            std::ostringstream bits;
+            bits << std::bitset<8>(line_hi) << " " << std::bitset<8>(line_lo);
+            GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << bits.str();
+
+            std::ostringstream indices;
+            for (uint8_t sx = 0; sx < 8; sx++) {
+                uint8_t col_offset = 7 - sx;
+                uint8_t colour_idx = static_cast<uint8_t>(((line_lo >> col_offset) & 0x1) | (((line_hi >> col_offset) & 0x1) << 1));
+
+                indices << std::bitset<2>(colour_idx) << " ";
+            }
+            GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << indices.str();
+
+            std::ostringstream o_colours;
+            for (uint8_t sx = 0; sx < 8; sx++) {
+                uint8_t col_offset = 7 - sx;
+                uint8_t colour_idx = static_cast<uint8_t>(((line_lo >> col_offset) & 0x1) | (((line_hi >> col_offset) & 0x1) << 1));
+                uint8_t colour = (palette >> (colour_idx * 2)) & 0x3;
+
+                uint8_t colour_indicator;
+                switch (colour) {
+                    case 0: colour_indicator = ' '; break;
+                    case 1: colour_indicator = 'L'; break;
+                    case 2: colour_indicator = 'D'; break;
+                    case 3: colour_indicator = 'B'; break;
+                    default: colour_indicator = ' '; break;
+                }
+
+                o_colours << colour_indicator << " ";
+            }
+            GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(30) << o_colours.str() << std::endl;
+        }
+
+        pad.wait();
+    };
+
+    auto _dump_map = [this, &pad] (uint16_t map_addr, uint16_t tile_data_addr, int16_t x, int16_t y, bool map_visible, bool wrap) -> void {
+        bool unsigned_offset = (tile_data_addr == 0x8000);
+        int16_t tx = x >> 3;
+        int16_t ty = y >> 3;
+
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setfill(' ') << std::setw(20) << "tile map address";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setfill(' ') << std::setw(20) << "tile data address";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setfill(' ') << std::setw(20) << "map pixel location";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setfill(' ') << std::setw(20) << "map tile location";
+        GB_LOGGER(GB_LOG_TRACE) << std::endl;
+
+        std::ostringstream map_addr_str, tile_data_addr_str;
+        map_addr_str << "0x" << std::setw(4) << std::hex << map_addr;
+        tile_data_addr_str << "0x" << std::setw(4) << std::hex << tile_data_addr;
+
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(20) << map_addr_str.str();
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(20) << tile_data_addr_str.str();
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(20) << "(" + std::to_string(x) + "," + std::to_string(y) + ")";
+        GB_LOGGER(GB_LOG_TRACE) << std::left << std::setw(20) << "(" + std::to_string(tx) + "," + std::to_string(ty) + ")";
+        GB_LOGGER(GB_LOG_TRACE) << std::endl << std::endl;
+
+        wattron(pad.m_win, WA_BOLD);
+        for (uint16_t i = 0; i < 32; i++) {
+            GB_LOGGER(GB_LOG_TRACE) << std::left << std::setfill(' ') << std::setw(5) << std::dec << static_cast<unsigned int>(i);
+        }
+        GB_LOGGER(GB_LOG_TRACE) << std::endl;
+        wattroff(pad.m_win, WA_BOLD);
+
+        for (int16_t i = 0; i < 32; i++) {
+            for (int16_t j = 0; j < 32; j++) {
+                uint8_t tile_num = m_ppu->read_byte(map_addr + static_cast<uint16_t>(i)*32 + static_cast<uint16_t>(j));
+                if (map_visible && (((i >= ty && i < (ty + 18)) || (i < ((ty + 18) % 32) && wrap)) && ((j >= tx && j < (tx + 20)) || (j < ((tx + 20) % 32) && wrap)))) wattron(pad.m_win, WA_STANDOUT);
+                GB_LOGGER(GB_LOG_TRACE) << std::left << std::setfill(' ') << std::setw(5) << std::dec;
+                if (unsigned_offset) { GB_LOGGER(GB_LOG_TRACE) << static_cast<unsigned int>(tile_num); }
+                else { GB_LOGGER(GB_LOG_TRACE) << static_cast<int>(static_cast<int8_t>(tile_num)); }
+                wattroff(pad.m_win, WA_STANDOUT);
+            }
+            wattron(pad.m_win, WA_BOLD);
+            GB_LOGGER(GB_LOG_TRACE) <<  std::left << std::setfill(' ') << std::setw(5) << std::dec << static_cast<unsigned int>(i) << std::endl;
+            wattroff(pad.m_win, WA_BOLD);
+        }
+        GB_LOGGER(GB_LOG_TRACE) << std::endl;
+
+        pad.wait();
+    };
+
+    uint8_t lcdc = m_emulator.m_memory_map.read_byte(GB_LCDC_ADDR);
+    uint16_t tile_data_addr = (lcdc & 0x10) ? 0x8000 : 0x9000;
+
+    if (tokens.size() == 0) {
+    } else if (tokens[0] == "see") {
+        if (!_try_strtoul()) return;
+        if (((tile_data_addr == 0x8000) ? !(data >= 0 && data < 256) : !(data >= -128 && data < 128))) {
+            GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_tile_map_viewer() -- Invalid tile #: " << data << std::endl;
+            pad.wait();
+            return;
+        }
+        _see_tile(tile_data_addr, data);
+    } else if (tokens[0] == "dump" && tokens.size() > 1 && tokens[1] == "bg") {
+        uint8_t scx = m_ppu->m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_X_ADDR);
+        uint8_t scy = m_ppu->m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_Y_ADDR);
+        uint16_t map_addr = (lcdc & 0x8) ? 0x9c00 : 0x9800;
+        bool map_visible = (lcdc & 0x1);
+        _dump_map(map_addr, tile_data_addr, scx, scy, map_visible, true);
+    } else if (tokens[0] == "dump" && tokens.size() > 1 && tokens[1] == "win") {
+        uint8_t scx = m_ppu->m_ppu_win_scroll->read_byte(GB_PPU_WIN_SCROLL_X_ADDR);
+        uint8_t scy = m_ppu->m_ppu_win_scroll->read_byte(GB_PPU_WIN_SCROLL_Y_ADDR);
+        uint16_t map_addr = (lcdc & 0x40) ? 0x9c00 : 0x9800;
+        bool map_visible = (lcdc & 0x20) && (scx >=0 && scx < 167) && (scy >=0 && scy < 144);
+        _dump_map(map_addr, tile_data_addr, static_cast<int8_t>(scx-7), static_cast<int8_t>(scy), map_visible, false);
+    } else {
+        GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_tile_map_viewer() -- Unknown command: " << tokens[0] << std::endl;
+        pad.wait();
+    }
+}
 void gb_debugger::_debugger_scroll_up_half_pg() {
     // Half page up
     int max_lines = getmaxy(stdscr);

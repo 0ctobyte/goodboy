@@ -114,7 +114,8 @@ void gb_ppu::_draw_background(uint8_t ly) {
     auto get_tile_pixel_colour_idx = [this, tile_pixel_y_offset](uint16_t tile_data_addr, uint8_t tile_pixel_x) -> uint8_t {
         uint8_t tile_line_lo = this->read_byte(tile_data_addr + tile_pixel_y_offset);
         uint8_t tile_line_hi = this->read_byte(tile_data_addr + tile_pixel_y_offset+ 1);
-        return static_cast<uint8_t>(((tile_line_lo >> (7-tile_pixel_x)) & 0x1) | (((tile_line_hi >> (7-tile_pixel_x)) & 0x1) << 1));
+        uint8_t x = 7 - tile_pixel_x;
+        return static_cast<uint8_t>(((tile_line_lo >> x) & 0x1) | (((tile_line_hi >> x) & 0x1) << 1));
     };
 
     for (uint8_t lx = 0; lx < 160; lx++) {

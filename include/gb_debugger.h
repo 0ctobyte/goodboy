@@ -43,6 +43,7 @@ private:
     void _debugger_watchpoints();
     void _debugger_save_trace();
     void _debugger_sprite_viewer();
+    void _debugger_tile_map_viewer();
     void _debugger_scroll_up_half_pg();
     void _debugger_scroll_dn_half_pg();
     void _debugger_scroll_to_start();

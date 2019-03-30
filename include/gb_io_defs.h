@@ -34,7 +34,7 @@
 #define GB_PPU_OBP0_ADDR         (0xFF48)
 #define GB_PPU_OBP1_ADDR         (0xFF49)
 #define GB_PPU_WIN_SCROLL_Y_ADDR (0xFF4A)
-//#define GB_PPU_WIN_SCROLL_X_ADDR (0xFF4B)
+#define GB_PPU_WIN_SCROLL_X_ADDR (0xFF4B)
 
 #define GB_IFLAGS_ADDR           (0xFF0F)
 #define GB_IENABLE_ADDR          (0xFFFF)
