@@ -293,7 +293,7 @@ void gb_mbc3::write_byte(uint16_t addr, uint8_t val) {
         break;
         case 2:
         {
-            // A value between 0x0-0x7 selects a RAM bank in 0xA000-0xBFFF
+            // A value between 0x0-0x3 selects a RAM bank in 0xA000-0xBFFF
             // A value between 0x8-0c selects a RTC register in 0xA000-0xBFFF
             if (val < 0x4) {
                 m_ram->set_current_bank(val);
