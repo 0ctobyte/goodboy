@@ -8,8 +8,9 @@ GoodBoy is a (yet another) gameboy emulator. The goal of this project is to lear
 
 ## Status
 
-Currently the CPU core passes all of blargg's CPU instruction tests. It can play Tetris. Memory bank controller support is WIP.
-There is a limited debugger mode; more details below.
+Currently the CPU core passes all of blargg's CPU instruction tests. It can play Tetris, Dr. Mario, Kirby's Dream Land, Kirby's Pinball Land, and Pokemon Red.
+But those are the only games I've tried so it can likely play other games. Memory bank controller support is WIP; Currently MBC1, MBC2 & MBC3 seem to work.
+There is a pretty coold debugger mode; more details below.
 
 ## Build
 
@@ -51,5 +52,10 @@ The GoodBoy debugger is an ncurses terminal app and supports the following featu
 * Modifying and viewing single registers (8-bit and 16-bit registers are both supported)
 * Modifying and viewing a single memory location
 * Scrolling support to view complete trace in the terminal
+* Breakpoints
+* Watchpoints
+* Saving trace to file
+* Dumping OAM memory and viewing sprite tiles (from inside the terminal)
+* Dumping background and window maps and viewing tiles (also from inside the terminal)
 
 For command usage, type `h` in the debugger.
