@@ -43,6 +43,9 @@ bool gb_emulator::_run_bootrom() {
     // Load the DMG bootrom
     dmg_file.read(reinterpret_cast<char*>(game_rom->get_mem()), size);
 
+    // Turn off the LCD & background in the LCDC register
+    m_memory_map.write_byte(GB_LCDC_ADDR, 0x0);
+
     // Run the bootrom
     while (m_cpu.get_pc() < 0x100 && m_renderer.is_open()) {
         step(70224);

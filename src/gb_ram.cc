@@ -5,9 +5,9 @@
 #include "gb_ram.h"
 #include "gb_io_defs.h"
 
-gb_ram::gb_ram(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size, size_t ram_size)
+gb_ram::gb_ram(gb_memory_manager& memory_manager, uint16_t start_addr, size_t size, size_t ram_size, bool _4bit_mode)
     : gb_memory_mapped_device(memory_manager),
-      m_ram_size(ram_size), m_num_banks(std::max(1ul, ram_size / GB_RAM_BANK_SIZE)), m_cur_bank(0)
+      m_ram_size(ram_size), m_num_banks(std::max(1ul, ram_size / GB_RAM_BANK_SIZE)), m_cur_bank(0), m_4bit_mode(_4bit_mode)
 {
     m_start_addr = start_addr;
     m_size = size;
@@ -30,6 +30,11 @@ unsigned long gb_ram::translate(uint16_t addr) const {
     }
 
     return (offset + m_mm_start_addr);
+}
+
+uint8_t gb_ram::read_byte(uint16_t addr) {
+    uint8_t data = gb_memory_mapped_device::read_byte(addr);
+    return (m_4bit_mode) ? (data & 0xf) : data;
 }
 
 unsigned long gb_ram::get_current_bank() const {

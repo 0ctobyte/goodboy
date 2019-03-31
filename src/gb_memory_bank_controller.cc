@@ -118,7 +118,7 @@ gb_memory_mapped_device_ptr gb_memory_bank_controller::make_mbc(gb_memory_manage
     gb_ram_ptr ram;
     if (cartridge_attr.has_ram || (cartridge_attr.mbc_type == GB_MBC_TYPE2)) {
         // Add 8KB of external RAM (on the cartridge)
-        ram = std::make_shared<gb_ram>(memory_manager, GB_RAM_ADDR, GB_RAM_BANK_SIZE, ram_size);
+        ram = std::make_shared<gb_ram>(memory_manager, GB_RAM_ADDR, GB_RAM_BANK_SIZE, ram_size, cartridge_attr.mbc_type == GB_MBC_TYPE2);
         addr_range = ram->get_address_range();
         memory_map.add_readable_device(ram, std::get<0>(addr_range), std::get<1>(addr_range));
         memory_map.add_writeable_device(ram, std::get<0>(addr_range), std::get<1>(addr_range));
@@ -130,6 +130,8 @@ gb_memory_mapped_device_ptr gb_memory_bank_controller::make_mbc(gb_memory_manage
     switch (cartridge_attr.mbc_type) {
         case GB_MBC_NONE: break;
         case GB_MBC_TYPE1: mbc = std::make_shared<gb_mbc1>(memory_manager, memory_map, rom1, ram); break;
+        case GB_MBC_TYPE2: mbc = std::make_shared<gb_mbc2>(memory_manager, memory_map, rom1, ram); break;
+        case GB_MBC_TYPE3: mbc = std::make_shared<gb_mbc3>(memory_manager, memory_map, rom1, ram); break;
         default:
         {
             std::ostringstream sstr;
@@ -151,9 +153,6 @@ gb_mbc1::gb_mbc1(gb_memory_manager& memory_manager, gb_memory_map& memory_map, g
     // The MBC doesn't actually need real memory backing it. It only responds to write requests
     // in the RAM address space and forwards read requests to the ROM banks connected to it
     m_mm_start_addr = 0;
-}
-
-gb_mbc1::~gb_mbc1() {
 }
 
 uint8_t gb_mbc1::read_byte(uint16_t addr) {
@@ -203,5 +202,106 @@ void gb_mbc1::write_byte(uint16_t addr, uint8_t val) {
         break;
         case 3: m_rom_or_ram_mode = (val & 0x1) != 0; break;
         default: GB_LOGGER(GB_LOG_WARN) << "gb_mbc1::write_byte - Address not implemented: " << std::hex << addr << " -- " << static_cast<uint16_t>(val) << std::endl; break;
+    }
+}
+
+gb_mbc2::gb_mbc2(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_rom_ptr rom, gb_ram_ptr ram)
+    : gb_memory_mapped_device(memory_manager),
+      m_memory_map(memory_map), m_rom(rom), m_ram(ram)
+{
+    m_start_addr = GB_MBC_ADDR;
+    m_size = GB_MBC_SIZE;
+
+    // The MBC doesn't actually need real memory backing it. It only responds to write requests
+    // in the RAM address space and forwards read requests to the ROM banks connected to it
+    m_mm_start_addr = 0;
+}
+
+uint8_t gb_mbc2::read_byte(uint16_t addr) {
+    throw std::out_of_range("gb_mbc2::read_byte - read operation not supported");
+}
+
+void gb_mbc2::write_byte(uint16_t addr, uint8_t val) {
+    uint8_t action = (addr >> 13) & 0x3;
+    switch (action) {
+        case 0:
+        {
+            // Enable or disable RAM. Any value with 0xA in the lower nibble will enable RAM, otherwise will disable RAM
+            // The least significant bit of the upper address byte must be '0' to enable/disable the RAM
+            if (addr & 0x0100) break;
+            gb_address_range_t addr_range = m_ram->get_address_range();
+            if ((val & 0xf) == 0xa) {
+                m_memory_map.add_readable_device(m_ram, std::get<0>(addr_range), std::get<1>(addr_range));
+                m_memory_map.add_writeable_device(m_ram, std::get<0>(addr_range), std::get<1>(addr_range));
+            } else {
+                m_memory_map.remove_readable_device(std::get<0>(addr_range), std::get<1>(addr_range));
+                m_memory_map.remove_writeable_device(std::get<0>(addr_range), std::get<1>(addr_range));
+            }
+        }
+        break;
+        case 1:
+        {
+            // The least significant bit of the upper address byte must be '1' to select a ROM bank
+            if ((addr & 0x0100) == 0) break;
+            if (val == 0) val = 1;
+            m_rom->set_current_bank((val & 0xf) - 1);
+        }
+        break;
+        default: GB_LOGGER(GB_LOG_WARN) << "gb_mbc2::write_byte - Address not implemented: " << std::hex << addr << " -- " << static_cast<uint16_t>(val) << std::endl; break;
+    }
+}
+
+gb_mbc3::gb_mbc3(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_rom_ptr rom, gb_ram_ptr ram)
+    : gb_memory_mapped_device(memory_manager),
+      m_memory_map(memory_map), m_rom(rom), m_ram(ram)
+{
+    m_start_addr = GB_MBC_ADDR;
+    m_size = GB_MBC_SIZE;
+
+    // The MBC doesn't actually need real memory backing it. It only responds to write requests
+    // in the RAM address space and forwards read requests to the ROM banks connected to it
+    m_mm_start_addr = 0;
+}
+
+uint8_t gb_mbc3::read_byte(uint16_t addr) {
+    throw std::out_of_range("gb_mbc3::read_byte - read operation not supported");
+}
+
+void gb_mbc3::write_byte(uint16_t addr, uint8_t val) {
+    uint8_t action = (addr >> 13) & 0x3;
+    switch (action) {
+        case 0:
+        {
+            // Enable or disable RAM/RTC. Any value with 0xA in the lower nibble will enable RAM, otherwise will disable RAM
+            gb_address_range_t addr_range = m_ram->get_address_range();
+            if ((val & 0xf) == 0xa) {
+                m_memory_map.add_readable_device(m_ram, std::get<0>(addr_range), std::get<1>(addr_range));
+                m_memory_map.add_writeable_device(m_ram, std::get<0>(addr_range), std::get<1>(addr_range));
+            } else if ((val & 0xf) == 0) {
+                m_memory_map.remove_readable_device(std::get<0>(addr_range), std::get<1>(addr_range));
+                m_memory_map.remove_writeable_device(std::get<0>(addr_range), std::get<1>(addr_range));
+            }
+        }
+        break;
+        case 1:
+        {
+            // Write 7 bits of the ROM bank number
+            // A bank number of 0x0 gets translated to 0x1 on MBC3
+            if (val == 0) val = 0x1;
+            m_rom->set_current_bank((val & 0x7f) - 1);
+        }
+        break;
+        case 2:
+        {
+            // A value between 0x0-0x7 selects a RAM bank in 0xA000-0xBFFF
+            // A value between 0x8-0c selects a RTC register in 0xA000-0xBFFF
+            if (val < 0x4) {
+                m_ram->set_current_bank(val);
+            } else if (val < 0xD) {
+            }
+        }
+        break;
+        case 3: break;
+        default: GB_LOGGER(GB_LOG_WARN) << "gb_mbc3::write_byte - Address not implemented: " << std::hex << addr << " -- " << static_cast<uint16_t>(val) << std::endl; break;
     }
 }
