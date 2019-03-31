@@ -36,5 +36,6 @@ unsigned long gb_rom::get_current_bank() const {
 }
 
 void gb_rom::set_current_bank(unsigned long bank) {
-    m_cur_bank = bank;
+    // Wrap the bank number so it's within the actual supported number of banks for the ROM
+    m_cur_bank = bank % m_num_banks;
 }

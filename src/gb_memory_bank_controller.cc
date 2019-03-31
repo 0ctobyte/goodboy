@@ -165,6 +165,7 @@ void gb_mbc1::write_byte(uint16_t addr, uint8_t val) {
         case 0:
         {
             // Enable or disable RAM. Any value with 0xA in the lower nibble will enable RAM, otherwise will disable RAM
+            if (m_ram == nullptr) break;
             gb_address_range_t addr_range = m_ram->get_address_range();
             if ((val & 0xf) == 0xa) {
                 m_memory_map.add_readable_device(m_ram, std::get<0>(addr_range), std::get<1>(addr_range));
@@ -193,7 +194,7 @@ void gb_mbc1::write_byte(uint16_t addr, uint8_t val) {
         {
             // Depending on the ROM/RAM mode set in register 3, this will either set the low 2 bits of the RAM bank or set the high 2 bits of the ROM bank
             if (m_rom_or_ram_mode) {
-                m_ram->set_current_bank(val & 0x3);
+                if (m_ram != nullptr) m_ram->set_current_bank(val & 0x3);
             } else {
                 unsigned long cur_bank = m_rom->get_current_bank() + 1;
                 m_rom->set_current_bank(((cur_bank & 0x1f) | static_cast<unsigned long>(((val & 0x3) << 5))) - 1);
@@ -273,6 +274,7 @@ void gb_mbc3::write_byte(uint16_t addr, uint8_t val) {
         case 0:
         {
             // Enable or disable RAM/RTC. Any value with 0xA in the lower nibble will enable RAM, otherwise will disable RAM
+            if (m_ram == nullptr) break;
             gb_address_range_t addr_range = m_ram->get_address_range();
             if ((val & 0xf) == 0xa) {
                 m_memory_map.add_readable_device(m_ram, std::get<0>(addr_range), std::get<1>(addr_range));
@@ -296,7 +298,7 @@ void gb_mbc3::write_byte(uint16_t addr, uint8_t val) {
             // A value between 0x0-0x3 selects a RAM bank in 0xA000-0xBFFF
             // A value between 0x8-0c selects a RTC register in 0xA000-0xBFFF
             if (val < 0x4) {
-                m_ram->set_current_bank(val);
+                if (m_ram != nullptr) m_ram->set_current_bank(val);
             } else if (val < 0xD) {
             }
         }
