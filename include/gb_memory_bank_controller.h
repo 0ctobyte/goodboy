@@ -22,13 +22,6 @@ private:
     gb_rom_ptr     m_rom;
     gb_ram_ptr     m_ram;
     bool           m_rom_or_ram_mode;
-
-    void mbc1_enable_ram(uint8_t data);
-    void mbc1_set_rom_bank_lo(uint8_t data);
-    void mbc1_set_rom_bank_hi(uint8_t data);
-    void mbc1_set_ram_bank(uint8_t data);
-    void mbc1_set_rom_or_ram_bank(uint8_t data);
-    void mbc1_set_rom_or_ram_mode(uint8_t data);
 };
 
 #endif // GB_MEMORY_BANK_CONTROLLER_
