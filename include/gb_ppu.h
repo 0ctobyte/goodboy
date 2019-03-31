@@ -45,6 +45,7 @@ private:
     int                         m_next_line;
 
     void _draw_background(uint8_t ly);
+    void _draw_window(uint8_t ly);
     void _draw_sprites(uint8_t ly);
 };
 

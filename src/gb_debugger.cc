@@ -865,7 +865,7 @@ void gb_debugger::_debugger_tile_map_viewer() {
         int16_t scx = static_cast<int8_t>(m_ppu->m_ppu_win_scroll->read_byte(GB_PPU_WIN_SCROLL_X_ADDR));
         int16_t scy = static_cast<int8_t>(m_ppu->m_ppu_win_scroll->read_byte(GB_PPU_WIN_SCROLL_Y_ADDR));
         uint16_t map_addr = (lcdc & 0x40) ? 0x9c00 : 0x9800;
-        bool map_visible = (lcdc & 0x20) && (scx >=0 && scx < 167) && (scy >=0 && scy < 144);
+        bool map_visible = (lcdc & 0x20) && (lcdc & 0x1) && (scx >=0 && scx < 167) && (scy >=0 && scy < 144);
         _dump_map(map_addr, tile_data_addr, scx-7, scy, map_visible, false);
     } else {
         GB_LOGGER(GB_LOG_TRACE) << "gb_debugger::_debugger_tile_map_viewer() -- Unknown command: " << tokens[0] << std::endl;
