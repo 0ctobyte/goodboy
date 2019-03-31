@@ -59,14 +59,15 @@ void gb_emulator::load_rom(const std::string& rom_filename) {
     // Initialize the memory bank controller which controls the first 32KB of ROM and the 8KB of external RAM
     // The MBC listens to writes to the ROM space (0x0 - 0x8000) and configures the ROM/RAM and other devices
     // mapped to the ROM and external RAM space inside the cartridge
-    gb_memory_bank_controller_ptr mbc = std::make_shared<gb_memory_bank_controller>(m_memory_manager, m_memory_map);
-    mbc->load_rom(rom_filename);
-    gb_address_range_t addr_range = mbc->get_address_range();
-    m_memory_map.add_writeable_device(mbc, std::get<0>(addr_range), std::get<1>(addr_range));
+    gb_memory_mapped_device_ptr mbc = gb_memory_bank_controller::make_mbc(m_memory_manager, m_memory_map, rom_filename);
+    if (mbc != nullptr) {
+        gb_address_range_t addr_range = mbc->get_address_range();
+        m_memory_map.add_writeable_device(mbc, std::get<0>(addr_range), std::get<1>(addr_range));
+    }
 
     // Add 8KB of work RAM (on the gameboy)
     gb_ram_ptr work_ram = std::make_shared<gb_ram>(m_memory_manager, 0xC000, 0x2000, 0x2000);
-    addr_range = work_ram->get_address_range();
+    gb_address_range_t addr_range = work_ram->get_address_range();
     m_memory_map.add_readable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
     m_memory_map.add_writeable_device(work_ram, std::get<0>(addr_range), std::get<1>(addr_range));
 
