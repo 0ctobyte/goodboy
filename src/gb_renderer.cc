@@ -3,14 +3,14 @@
 #include "gb_renderer.h"
 
 gb_renderer::gb_renderer(unsigned int width, unsigned int height)
-    : m_window(sf::VideoMode(std::max(width, static_cast<unsigned int>(GB_WIDTH)), std::max(height, static_cast<unsigned int>(GB_HEIGHT))), "gb_emulator", sf::Style::Default),
+    : m_window(sf::VideoMode(std::max(width, static_cast<unsigned int>(GB_WIDTH)), std::max(height, static_cast<unsigned int>(GB_HEIGHT))), "goodboy", sf::Style::Default),
       m_framebuffer(), m_texture(), m_sprite(), m_input()
 {
     sf::Vector2f window_size (m_window.getSize());
     m_framebuffer.create(GB_WIDTH, GB_HEIGHT);
     m_sprite.setScale(window_size.x / static_cast<float>(GB_WIDTH), window_size.y / static_cast<float>(GB_HEIGHT));
     m_window.setFramerateLimit(60);
-    m_window.setVerticalSyncEnabled(true);
+    //m_window.setVerticalSyncEnabled(true);
     m_window.setKeyRepeatEnabled(false);
     m_window.display();
 }
