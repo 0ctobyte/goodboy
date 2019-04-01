@@ -1,8 +1,15 @@
 #include "gb_lcd.h"
 #include "gb_io_defs.h"
 
-#define GB_LCD_STAT_JUMP_ADDR (0x48)
-#define GB_LCD_FLAG_BIT       (0x1)
+#define GB_LCD_STAT_JUMP_ADDR                   (0x48)
+#define GB_LCD_FLAG_BIT                         (0x1)
+
+#define GB_LCD_STAT_MODE_FLAG_MASK              (0x3)
+#define GB_LCD_STAT_LYC_COINCIDENCE_MASK        (0x4)
+#define GB_LCD_STAT_MODE0_MASK                  (0x8)
+#define GB_LCD_STAT_MODE1_MASK                  (0x10)
+#define GB_LCD_STAT_MODE2_MASK                  (0x20)
+#define GB_LCD_STAT_LYC_COINCIDENCE_ENABLE_MASK (0x40)
 
 gb_lcd::gb_lcd_ly_register::gb_lcd_ly_register(gb_memory_manager& memory_manager)
     : gb_memory_mapped_device(memory_manager, GB_LCD_LY_ADDR, 2)
@@ -60,7 +67,7 @@ bool gb_lcd::update(int cycles) {
 
     // Don't do anything if the LCD is off, reset LY and set mode=1 (V-blank)
     uint8_t lcdc = this->read_byte(GB_LCDC_ADDR);
-    if ((lcdc & 0x80) == 0) {
+    if ((lcdc & GB_LCDC_ENABLE_MASK) == 0) {
         m_scanline_counter = 0;
         m_lcd_ly->set_ly(0);
         gb_memory_mapped_device::write_byte(GB_LCD_STAT_ADDR, (lcd_stat & ~0x7) | 0x80);
@@ -78,18 +85,18 @@ bool gb_lcd::update(int cycles) {
         // Check the LYC comparison & set the LYC=LY bit in the LCD_STAT register
         // Don't interrupt if LCD_STAT[6] == 0
         if (ly == lyc) {
-            lcd_stat = lcd_stat | 0x4;
-            interrupt = (lcd_stat & 0x40) ? true : interrupt;
+            lcd_stat = lcd_stat | GB_LCD_STAT_LYC_COINCIDENCE_MASK;
+            interrupt = (lcd_stat & GB_LCD_STAT_LYC_COINCIDENCE_ENABLE_MASK) ? true : interrupt;
         } else {
-            lcd_stat = lcd_stat & ~0x4;
+            lcd_stat = lcd_stat & ~GB_LCD_STAT_LYC_COINCIDENCE_MASK;
         }
     }
 
     if (ly >= 144) {
         // LCD is in V-blank mode between scanlines 144-153
         // Don't interrupt if LCD_STAT[4] == 0
-        interrupt = (mode != 1 && (lcd_stat & 0x10)) ? true : interrupt;
-        lcd_stat = (lcd_stat & ~0x3) | 1;
+        interrupt = (mode != 1 && (lcd_stat & GB_LCD_STAT_MODE1_MASK)) ? true : interrupt;
+        lcd_stat = (lcd_stat & ~GB_LCD_STAT_MODE_FLAG_MASK) | 1;
     } else if (m_scanline_counter < 80) {
         // The first 80 clocks of a scanline the LCD is in mode 2 (searching OAM, OAM is not accessible)
         // Don't interrupt if LCD_STAT[5] == 0
@@ -99,8 +106,8 @@ bool gb_lcd::update(int cycles) {
             m_memory_map.remove_writeable_device(GB_PPU_OAM_ADDR, GB_PPU_OAM_SIZE);
         }
 
-        interrupt = (mode != 2 && (lcd_stat & 0x20)) ? true : interrupt;
-        lcd_stat = (lcd_stat & ~0x3) | 2;
+        interrupt = (mode != 2 && (lcd_stat & GB_LCD_STAT_MODE2_MASK)) ? true : interrupt;
+        lcd_stat = (lcd_stat & ~GB_LCD_STAT_MODE_FLAG_MASK) | 2;
     } else if (m_scanline_counter < 252) {
         // LCD is in mode 3 between 80 - 252 clocks, 172 clocks, (transferring VRAM and OAM data to LCD, VRAM & OAM is not accessible)
         // This period actually varies depending on the number of sprites being rendered
@@ -129,8 +136,8 @@ bool gb_lcd::update(int cycles) {
             m_vram = nullptr;
         }
 
-        interrupt = (mode != 0 && (lcd_stat & 0x8)) ? true : interrupt;
-        lcd_stat = (lcd_stat & ~0x3);
+        interrupt = (mode != 0 && (lcd_stat & GB_LCD_STAT_MODE0_MASK)) ? true : interrupt;
+        lcd_stat = (lcd_stat & ~GB_LCD_STAT_MODE_FLAG_MASK);
     }
 
     // Update the LCD STAT register
