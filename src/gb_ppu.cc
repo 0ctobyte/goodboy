@@ -2,8 +2,13 @@
 #include "gb_io_defs.h"
 #include "gb_logger.h"
 
-#define GB_PPU_VBLANK_JUMP_ADDR  (0x40)
-#define GB_PPU_VBLANK_FLAG_BIT   (0x0)
+#define GB_PPU_VBLANK_JUMP_ADDR       (0x40)
+#define GB_PPU_VBLANK_FLAG_BIT        (0x0)
+
+#define GB_PPU_BG_TILE_MAP0_ADDR      (0x9800)
+#define GB_PPU_BG_TILE_MAP1_ADDR      (0x9c00)
+#define GB_PPU_TILE_DATA0_BASE_ADDR   (0x9000)
+#define GB_PPU_TILE_DATA1_BASE_ADDR   (0x8000)
 
 struct gb_ppu_sprite_t {
     uint8_t  entry_num; // Entry # in the OAM, used for priority calculation
@@ -53,8 +58,8 @@ void gb_ppu::_draw_background(uint8_t ly) {
     uint8_t scy = m_ppu_bg_scroll->read_byte(GB_PPU_BG_SCROLL_Y_ADDR);
 
     uint8_t background_palette = m_ppu_palette->read_byte(GB_PPU_BGP_ADDR);
-    uint16_t background_tile_map_addr = (lcdc & 0x8) ? 0x9c00 : 0x9800;
-    uint16_t background_tile_data_sel_addr = (lcdc & 0x10) ? 0x8000 : 0x9000;
+    uint16_t background_tile_map_addr = (lcdc & GB_LCDC_TILE_MAP_SEL_MASK) ? GB_PPU_BG_TILE_MAP1_ADDR : GB_PPU_BG_TILE_MAP0_ADDR;
+    uint16_t background_tile_data_sel_addr = (lcdc & GB_LCDC_TILE_DATA_SEL_MASK) ? GB_PPU_TILE_DATA1_BASE_ADDR : GB_PPU_TILE_DATA0_BASE_ADDR;
 
     uint8_t pixel_y = (scy + ly) & 0xff;
     uint8_t tile_y = pixel_y >> 3;
@@ -74,7 +79,7 @@ void gb_ppu::_draw_background(uint8_t ly) {
     // Starting at 0x9000, the tile number is used as a signed index between -127-127
     // Each tile is 8x8 pixels, composed of 16 bytes, 2 bytes per line of 8 pixels.
     auto get_tile_data_addr = [lcdc](uint16_t bgtds, uint8_t tile_num) -> uint16_t {
-        if (lcdc & 0x10) return (bgtds + (tile_num * 16));
+        if (lcdc & GB_LCDC_TILE_DATA_SEL_MASK) return (bgtds + (tile_num * 16));
         else return static_cast<uint16_t>(static_cast<int>(bgtds) + (static_cast<int8_t>(tile_num) * 16));
     };
 
@@ -124,16 +129,10 @@ void gb_ppu::_draw_background(uint8_t ly) {
         uint8_t tile_pixel_x = pixel_x & 0x7;
         uint16_t tile_data_addr = get_tile_data_addr(background_tile_data_sel_addr, get_tile_num(background_tile_map_addr, tile_x, tile_y));
 
-        // Get the colour index and put it in the background colour index array
+        // Get the colour index and put it in the linebuffer along with the palette
         // This will be used by the sprite rendering logic to determine background priority
         uint8_t col_idx = get_tile_pixel_colour_idx(tile_data_addr, tile_pixel_x);
-        m_linebuffer.at(lx) = (lcdc & 0x1) ? col_idx : 0;
-
-        // If the background is turned off (LCDC[0]) just draw white
-        gb_colour_t colour = (lcdc & 0x1) ? static_cast<gb_colour_t>((background_palette >> (col_idx * 2)) & 0x3) : GB_COLOUR0;
-
-        // Draw the pixel into the framebuffer
-        m_framebuffer.set_pixel(lx, ly, colour);
+        m_linebuffer.at(lx) = {GB_PPU_BG_PIXEL, static_cast<uint8_t>((lcdc & GB_LCDC_BG_WIN_ENABLE_MASK) ? col_idx : 0), background_palette};
     }
 }
 
@@ -145,14 +144,14 @@ void gb_ppu::_draw_window(uint8_t ly) {
 
     // The window isn't visible if the background/window isn't enabled, the window isn't enabled,
     // wx < 0 or wx >= 167, or wy < 0 or wy >= 144
-    if (!((lcdc & 0x20) && (lcdc & 0x1) && (wx >=0 && wx < 167) && (wy >=0 && wy < 144))) return;
+    if (!((lcdc & GB_LCDC_WIN_ENABLE_MASK) && (lcdc & GB_LCDC_BG_WIN_ENABLE_MASK) && (wx >=0 && wx < 167) && (wy >=0 && wy < 144))) return;
 
     // Check the scanline counter against the window scroll Y position. Don't start drawing until LY reaches WY
     if (ly < wy) return;
 
     uint8_t window_palette = m_ppu_palette->read_byte(GB_PPU_BGP_ADDR);
-    uint16_t window_tile_map_addr = (lcdc & 0x40) ? 0x9c00 : 0x9800;
-    uint16_t window_tile_data_sel_addr = (lcdc & 0x10) ? 0x8000 : 0x9000;
+    uint16_t window_tile_map_addr = (lcdc & GB_LCDC_WIN_TILE_MAP_SEL_MASK) ? GB_PPU_BG_TILE_MAP1_ADDR : GB_PPU_BG_TILE_MAP0_ADDR;
+    uint16_t window_tile_data_sel_addr = (lcdc & GB_LCDC_TILE_DATA_SEL_MASK) ? GB_PPU_TILE_DATA1_BASE_ADDR : GB_PPU_TILE_DATA0_BASE_ADDR;
 
     uint8_t pixel_y = static_cast<uint8_t>((wy + ly) & 0xff);
     uint8_t tile_y = pixel_y >> 3;
@@ -167,7 +166,7 @@ void gb_ppu::_draw_window(uint8_t ly) {
     // The tile number in the window tile map is used to index into one of the two tile data arrays in video RAM
     // This is pretty much similar to how the background tile data array works
     auto get_tile_data_addr = [lcdc](uint16_t wtds, uint8_t tile_num) -> uint16_t {
-        if (lcdc & 0x10) return (wtds + (tile_num * 16));
+        if (lcdc & GB_LCDC_TILE_DATA_SEL_MASK) return (wtds + (tile_num * 16));
         else return static_cast<uint16_t>(static_cast<int>(wtds) + (static_cast<int8_t>(tile_num) * 16));
     };
 
@@ -189,16 +188,10 @@ void gb_ppu::_draw_window(uint8_t ly) {
         uint8_t tile_x = static_cast<uint8_t>(lx >> 3);
         uint8_t tile_pixel_x = static_cast<uint8_t>((lx - wx) & 0x7);
         uint16_t tile_data_addr = get_tile_data_addr(window_tile_data_sel_addr, get_tile_num(window_tile_map_addr, tile_x, tile_y));
-
-        // Get the colour index and put it in the background colour index array
-        // This will be used by the sprite rendering logic to determine background priority
         uint8_t col_idx = get_tile_pixel_colour_idx(tile_data_addr, tile_pixel_x);
-        m_linebuffer.at(static_cast<uint8_t>(lx)) = col_idx;
 
-        gb_colour_t colour = static_cast<gb_colour_t>((window_palette >> (col_idx * 2)) & 0x3);
-
-        // Draw the pixel into the framebuffer
-        m_framebuffer.set_pixel(static_cast<uint8_t>(lx), ly, colour);
+        // Push the pixel into the linebuffer
+        m_linebuffer.at(static_cast<uint8_t>(lx)) = {GB_PPU_BG_PIXEL, col_idx, window_palette};
     }
 }
 
@@ -206,10 +199,10 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
     uint8_t lcdc = m_memory_map.read_byte(GB_LCDC_ADDR);
 
     // Don't draw sprites if LCDC[1] == 0
-    if ((lcdc & 0x2) == 0) return;
+    if ((lcdc & GB_LCDC_SPRITE_ENABLE_MASK) == 0) return;
 
     // Sprites can either 8x8 pixels or 8x16 pixels depending on LCDC[2]
-    bool double_size = (lcdc & 0x4) ? true : false;
+    bool double_size = (lcdc & GB_LCDC_SPRITE_SIZE_MASK) ? true : false;
     uint8_t sprite_size = double_size ? 16 : 8;
     uint16_t sprite_tile_data_addr = GB_VIDEO_RAM_ADDR;
     uint8_t obp0 = m_ppu_palette->read_byte(GB_PPU_OBP0_ADDR);
@@ -298,14 +291,14 @@ void gb_ppu::_draw_sprites(uint8_t ly) {
             if (colour_idx == 0) continue;
 
             // Get the colour from the object palette
-            gb_colour_t colour = static_cast<gb_colour_t>((obj_palette >> (colour_idx * 2)) & 0x3);
+            //gb_colour_t colour = static_cast<gb_colour_t>((obj_palette >> (colour_idx * 2)) & 0x3);
 
             // If BG priority is enabled then don't draw the pixel if the current background pixel colour is not colour 0
             // The background has priority for all other colours except colour 0 in which case the sprite pixel can be drawn
-            if (sprite.bg_priority && m_linebuffer.at(static_cast<size_t>(lx)) != 0) continue;
+            if (sprite.bg_priority && m_linebuffer.at(static_cast<size_t>(lx)).pixel_type == GB_PPU_BG_PIXEL && m_linebuffer.at(static_cast<size_t>(lx)).colour_idx != 0) continue;
 
-            // Draw the pixel into the framebuffer
-            m_framebuffer.set_pixel(static_cast<uint8_t>(lx), ly, colour);
+            // Push the pixel into the linebuffer
+            m_linebuffer.at(static_cast<size_t>(lx)) = {GB_PPU_SPRITE_PIXEL, colour_idx, obj_palette};
         }
     }
 }
@@ -323,6 +316,13 @@ bool gb_ppu::update(int cycles) {
         _draw_background(ly);
         _draw_window(ly);
         _draw_sprites(ly);
+
+        // Draw linebuffer to framebuffer
+        for (const gb_ppu_pixel_t& p : m_linebuffer) {
+            uint8_t lx = static_cast<uint8_t>(&p - &m_linebuffer[0]);
+            gb_colour_t colour = static_cast<gb_colour_t>((p.palette >> (p.colour_idx *2)) & 0x3);
+            m_framebuffer.set_pixel(lx, ly, colour);
+        }
     }
 
     // Update next scan line

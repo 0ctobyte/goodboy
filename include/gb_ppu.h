@@ -16,7 +16,18 @@ public:
     virtual bool update(int cycles) override;
 
 private:
-    using gb_ppu_linebuffer_t = std::array<uint8_t, 160>;
+    enum gb_ppu_pixel_type_t {
+        GB_PPU_BG_PIXEL,
+        GB_PPU_SPRITE_PIXEL
+    };
+
+    struct gb_ppu_pixel_t {
+        gb_ppu_pixel_type_t pixel_type;
+        uint8_t             colour_idx;
+        uint8_t             palette;
+    };
+
+    using gb_ppu_linebuffer_t = std::array<gb_ppu_pixel_t, 160>;
 
     // Registers used by the PPU
     // bg_scroll - SCY: BG Y Position SCX: BG X Position
