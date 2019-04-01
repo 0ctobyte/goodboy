@@ -259,7 +259,7 @@ void gb_mbc2::write_byte(uint16_t addr, uint8_t val) {
 
 gb_mbc3::gb_mbc3(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_rom_ptr rom, gb_ram_ptr ram, gb_rtc_ptr rtc)
     : gb_memory_mapped_device(memory_manager),
-      m_memory_map(memory_map), m_rom(rom), m_ram(ram), m_rtc(rtc)
+      m_memory_map(memory_map), m_rom(rom), m_ram(ram), m_rtc(rtc), m_rtc_latch(0)
 {
     m_start_addr = GB_MBC_ADDR;
     m_size = GB_MBC_SIZE;
@@ -315,14 +315,20 @@ void gb_mbc3::write_byte(uint16_t addr, uint8_t val) {
             }
         }
         break;
-        case 3: break;
+        case 3:
+        {
+            // Latch RTC registers with clock data from 0 -> 1 transition in this register
+            if (m_rtc_latch == 0 && val == 1) m_rtc->update();
+            m_rtc_latch = val;
+        }
+        break;
         default: GB_LOGGER(GB_LOG_WARN) << "gb_mbc3::write_byte - Address not implemented: " << std::hex << addr << " -- " << static_cast<uint16_t>(val) << std::endl; break;
     }
 }
 
 gb_mbc5::gb_mbc5(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_rom_ptr rom, gb_ram_ptr ram, gb_rtc_ptr rtc)
     : gb_memory_mapped_device(memory_manager),
-      m_memory_map(memory_map), m_rom(rom), m_ram(ram), m_rtc(rtc)
+      m_memory_map(memory_map), m_rom(rom), m_ram(ram), m_rtc(rtc), m_rtc_latch(0)
 {
     m_start_addr = GB_MBC_ADDR;
     m_size = GB_MBC_SIZE;
@@ -388,7 +394,13 @@ void gb_mbc5::write_byte(uint16_t addr, uint8_t val) {
             }
         }
         break;
-        case 3: break;
+        case 3:
+        {
+            // Latch RTC registers with clock data from 0 -> 1 transition in this register
+            if (m_rtc_latch == 0 && val == 1) m_rtc->update();
+            m_rtc_latch = val;
+        }
+        break;
         default: GB_LOGGER(GB_LOG_WARN) << "gb_mbc5::write_byte - Address not implemented: " << std::hex << addr << " -- " << static_cast<uint16_t>(val) << std::endl; break;
     }
 }

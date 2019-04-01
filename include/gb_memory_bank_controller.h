@@ -49,6 +49,7 @@ private:
     gb_rom_ptr     m_rom;
     gb_ram_ptr     m_ram;
     gb_rtc_ptr     m_rtc;
+    uint8_t        m_rtc_latch;
 };
 
 class gb_mbc5 : public gb_memory_mapped_device {
@@ -63,6 +64,7 @@ private:
     gb_rom_ptr     m_rom;
     gb_ram_ptr     m_ram;
     gb_rtc_ptr     m_rtc;
+    uint8_t        m_rtc_latch;
 };
 
 #endif // GB_MEMORY_BANK_CONTROLLER_
