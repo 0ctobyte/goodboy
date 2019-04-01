@@ -136,7 +136,7 @@ gb_memory_mapped_device_ptr gb_memory_bank_controller::make_mbc(gb_memory_manage
         case GB_MBC_TYPE1: mbc = std::make_shared<gb_mbc1>(memory_manager, memory_map, rom1, ram); break;
         case GB_MBC_TYPE2: mbc = std::make_shared<gb_mbc2>(memory_manager, memory_map, rom1, ram); break;
         case GB_MBC_TYPE3: mbc = std::make_shared<gb_mbc3>(memory_manager, memory_map, rom1, ram, rtc); break;
-        case GB_MBC_TYPE5: mbc = std::make_shared<gb_mbc5>(memory_manager, memory_map, rom1, ram, rtc); break;
+        case GB_MBC_TYPE5: mbc = std::make_shared<gb_mbc5>(memory_manager, memory_map, rom1, ram); break;
         default:
         {
             std::ostringstream sstr;
@@ -326,9 +326,9 @@ void gb_mbc3::write_byte(uint16_t addr, uint8_t val) {
     }
 }
 
-gb_mbc5::gb_mbc5(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_rom_ptr rom, gb_ram_ptr ram, gb_rtc_ptr rtc)
+gb_mbc5::gb_mbc5(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_rom_ptr rom, gb_ram_ptr ram)
     : gb_memory_mapped_device(memory_manager),
-      m_memory_map(memory_map), m_rom(rom), m_ram(ram), m_rtc(rtc), m_rtc_latch(0)
+      m_memory_map(memory_map), m_rom(rom), m_ram(ram)
 {
     m_start_addr = GB_MBC_ADDR;
     m_size = GB_MBC_SIZE;
@@ -347,7 +347,7 @@ void gb_mbc5::write_byte(uint16_t addr, uint8_t val) {
     switch (action) {
         case 0:
         {
-            // Enable or disable RAM/RTC. Any value with 0xA in the lower nibble will enable RAM, otherwise will disable RAM
+            // Enable or disable RAM. Any value with 0xA in the lower nibble will enable RAM, otherwise will disable RAM
             if ((val & 0xf) == 0xa) {
                 if (m_ram == nullptr) break;
                 gb_address_range_t addr_range = m_ram->get_address_range();
@@ -362,43 +362,30 @@ void gb_mbc5::write_byte(uint16_t addr, uint8_t val) {
         case 1:
         {
             if ((addr >> 12) & 0x1) {
-                // Write the higher 8 bits of the ROM bank number
+                // Write the higher 1 bit of the ROM bank number
                 unsigned long cur_bank = m_rom->get_current_bank();
-                cur_bank = static_cast<unsigned long>(val << 8) | (cur_bank & 0xff);
+                cur_bank = static_cast<unsigned long>((val & 0x1) << 8) | (cur_bank & 0xff);
                 if (cur_bank == 0) cur_bank = 0x1;
-                m_rom->set_current_bank(cur_bank);
+                m_rom->set_current_bank(cur_bank - 1);
             } else {
                 // Write the lower 8 bits of the ROM bank number
                 // A bank number of 0x0 gets translated to 0x1 on MBC5
                 unsigned long cur_bank = m_rom->get_current_bank();
                 cur_bank = (val & 0xff) | (cur_bank & 0xff00);
                 if (cur_bank == 0) cur_bank = 0x1;
-                m_rom->set_current_bank(cur_bank);
+                m_rom->set_current_bank(cur_bank - 1);
             }
         }
         break;
         case 2:
         {
-            // A value between 0x0-0x3 selects a RAM bank in 0xA000-0xBFFF
-            // A value between 0x8-0c selects a RTC register in 0xA000-0xBFFF
-            if (val < 0x4 && m_ram != nullptr) {
+            // A value between 0x0-0xf selects a RAM bank in 0xA000-0xBFFF
+            if (val < 16 && m_ram != nullptr) {
                 gb_address_range_t addr_range = m_ram->get_address_range();
                 m_ram->set_current_bank(val);
                 m_memory_map.add_readable_device(m_ram, std::get<0>(addr_range), std::get<1>(addr_range));
                 m_memory_map.add_writeable_device(m_ram, std::get<0>(addr_range), std::get<1>(addr_range));
-            } else if (val < 0xD && m_rtc != nullptr) {
-                gb_address_range_t addr_range = m_rtc->get_address_range();
-                m_rtc->set_current_register(val);
-                m_memory_map.add_readable_device(m_rtc, std::get<0>(addr_range), std::get<1>(addr_range));
-                m_memory_map.add_writeable_device(m_rtc, std::get<0>(addr_range), std::get<1>(addr_range));
             }
-        }
-        break;
-        case 3:
-        {
-            // Latch RTC registers with clock data from 0 -> 1 transition in this register
-            if (m_rtc_latch == 0 && val == 1) m_rtc->update();
-            m_rtc_latch = val;
         }
         break;
         default: GB_LOGGER(GB_LOG_WARN) << "gb_mbc5::write_byte - Address not implemented: " << std::hex << addr << " -- " << static_cast<uint16_t>(val) << std::endl; break;

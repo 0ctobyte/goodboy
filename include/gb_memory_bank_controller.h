@@ -54,7 +54,7 @@ private:
 
 class gb_mbc5 : public gb_memory_mapped_device {
 public:
-    gb_mbc5(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_rom_ptr rom, gb_ram_ptr ram, gb_rtc_ptr rtc);
+    gb_mbc5(gb_memory_manager& memory_manager, gb_memory_map& memory_map, gb_rom_ptr rom, gb_ram_ptr ram);
 
     virtual void write_byte(uint16_t addr, uint8_t val) override;
     virtual uint8_t read_byte(uint16_t addr) override;
@@ -63,8 +63,6 @@ private:
     gb_memory_map& m_memory_map;
     gb_rom_ptr     m_rom;
     gb_ram_ptr     m_ram;
-    gb_rtc_ptr     m_rtc;
-    uint8_t        m_rtc_latch;
 };
 
 #endif // GB_MEMORY_BANK_CONTROLLER_
