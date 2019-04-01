@@ -21,6 +21,7 @@ target_sources(goodboy
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_ram
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_rom
+        ${CMAKE_CURRENT_SOURCE_DIR}/gb_rtc
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_serial_io
         ${CMAKE_CURRENT_SOURCE_DIR}/gb_timer
         ${CMAKE_CURRENT_SOURCE_DIR}/main
