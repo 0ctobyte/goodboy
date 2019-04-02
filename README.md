@@ -8,9 +8,10 @@ GoodBoy is a (yet another) gameboy emulator. The goal of this project is to lear
 
 ## Status
 
-Currently the CPU core passes all of blargg's CPU instruction tests. It can play Tetris, Dr. Mario, Kirby's Dream Land, Kirby's Pinball Land, and Pokemon Red.
-But those are the only games I've tried so it can likely play other games. Memory bank controller support is WIP; Currently MBC1, MBC2 & MBC3 seem to work.
-There is a pretty coold debugger mode; more details below.
+Currently the CPU core passes all of blargg's CPU instruction tests. It can play Tetris, Dr. Mario, Kirby's Dream Land, Kirby's Pinball Land, Pokemon Red,
+Super Mario Land, Pokemon Gold, The Legend of Zelda - Link's Awakening, Donkey Kong  & Warioland II.
+But those are the only games I've tried so it can likely play other games. Currently MBC1, MBC2, MBC3 & MBC5 ROMS seem to work.
+There is a pretty cool debugger mode; more details below.
 
 ## Build
 
