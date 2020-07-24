@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <vector>
 #include <tuple>
+#include <memory>
 
 #include "gb_memory_manager.h"
 

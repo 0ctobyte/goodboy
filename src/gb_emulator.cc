@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <fstream>
+#include <cstring>
 
 #include "gb_emulator.h"
 #include "gb_memory_bank_controller.h"
