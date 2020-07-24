@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #include "gb_memory_manager.h"
 
 gb_memory_manager::gb_memory_manager()

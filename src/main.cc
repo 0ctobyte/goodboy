@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #include "gb_logger.h"
 #include "gb_emulator_opts.h"
 #include "gb_debugger.h"

@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #include "gb_dma.h"
 #include "gb_io_defs.h"
 #include "gb_logger.h"

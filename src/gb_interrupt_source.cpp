@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #include "gb_interrupt_source.h"
 
 gb_interrupt_source::gb_interrupt_source(uint16_t jump_address, uint8_t flag_bit)

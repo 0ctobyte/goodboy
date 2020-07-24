@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #ifndef GB_MEMORY_MAPPED_DEVICE_
 #define GB_MEMORY_MAPPED_DEVICE_
 

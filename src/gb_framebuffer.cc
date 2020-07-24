@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #include "gb_framebuffer.h"
 
 #define GB_FRAMEBUFFER_WHITE      sf::Color(255, 255, 255)

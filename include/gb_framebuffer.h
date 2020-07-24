@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #ifndef GB_FRAMEBUFFER_H_
 #define GB_FRAMEBUFFER_H_
 

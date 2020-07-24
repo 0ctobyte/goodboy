@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #ifndef GB_CPU_CB_INSTRUCTIONS_H_
 #define GB_CPU_CB_INSTRUCTIONS_H_
 

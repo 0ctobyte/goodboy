@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #ifndef GB_INTERRUPT_SOURCE_H_
 #define GB_INTERRUPT_SOURCE_H_
 

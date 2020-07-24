@@ -1,3 +1,9 @@
+/* 
+ * Copyright (c) 2019 Sekhar Bhattacharya
+ *
+ * SPDS-License-Identifier: MIT
+ */
+
 #ifndef GB_EMULATOR_OPTS_H_
 #define GB_EMULATOR_OPTS_H_
 
