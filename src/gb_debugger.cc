@@ -75,12 +75,12 @@ public:
     WINDOW* m_win;
 
     ncurses_buf() {}
-    ~ncurses_buf() {}
+    ~ncurses_buf() override {}
 
     void set_window(WINDOW* new_win) {
         m_win = new_win;
     }
-    virtual int overflow(int c);
+    virtual int overflow(int c) override;
 };
 
 int ncurses_buf::overflow(int c) {
@@ -100,7 +100,7 @@ public:
         m_tbuf.set_window(win);
     }
 
-    ~ncurses_stream();
+    ~ncurses_stream() override;
 };
 
 ncurses_stream::~ncurses_stream() {

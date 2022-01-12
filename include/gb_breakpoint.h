@@ -18,7 +18,7 @@ public:
     gb_breakpoint_exception(unsigned int val);
     gb_breakpoint_exception(unsigned int val, int cycles);
 
-    virtual char const * what() const noexcept;
+    virtual char const * what() const noexcept override;
     int get_last_cycle_count() const noexcept;
     unsigned int get_val() const noexcept;
 

@@ -13,6 +13,16 @@ Super Mario Land, Pokemon Gold, The Legend of Zelda - Link's Awakening, Donkey K
 But those are the only games I've tried so it can likely play other games. Currently MBC1, MBC2, MBC3 & MBC5 ROMS seem to work.
 There is a pretty cool debugger mode; more details below.
 
+The keyboard controller mappings are hardcoded for now:
+UP     -> Up Arrow Key
+DOWN   -> Down Arrow Key
+LEFT   -> Left Arrow Key
+RIGHT  -> Right Arrow Key
+A      -> x Key
+B      -> z key
+START  -> Return Key
+SELECT -> Right Shift Key
+
 ## Build
 
 [cmake](https://cmake.org) and [sfml](https://www.sfml-dev.org) are required to build this project. To build, run the following commands:

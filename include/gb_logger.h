@@ -38,7 +38,7 @@ public:
 
 protected:
     gb_logger();
-    virtual ~gb_logger();
+    virtual ~gb_logger() override;
 
 private:
     gb_logger_level_t m_log_level;
